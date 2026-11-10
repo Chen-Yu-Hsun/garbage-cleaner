@@ -1,0 +1,159 @@
+import React, { useState } from 'react';
+import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Sparkles } from 'lucide-react';
+import { sound } from '../audio/soundManager';
+
+interface StartScreenProps {
+  nickname: string;
+  onNicknameChange: (name: string) => void;
+  onStartGame: () => void;
+  onOpenLeaderboard: () => void;
+  onOpenInstructions: () => void;
+}
+
+export const StartScreen: React.FC<StartScreenProps> = ({
+  nickname,
+  onNicknameChange,
+  onStartGame,
+  onOpenLeaderboard,
+  onOpenInstructions,
+}) => {
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isMuted, setIsMuted] = useState(sound.getMuted());
+
+  const handleStart = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = nickname.trim();
+    if (clean.length < 2 || clean.length > 12) {
+      setErrorMsg('暱稱長度需介於 2 至 12 個字元！');
+      sound.playSplash();
+      return;
+    }
+    setErrorMsg('');
+    sound.playClick();
+    onStartGame();
+  };
+
+  const handleToggleMute = () => {
+    const muted = sound.toggleMute();
+    setIsMuted(muted);
+  };
+
+  return (
+    <div className="relative w-full h-full min-h-[520px] flex flex-col justify-between items-center p-6 bg-slate-950 text-slate-100 select-none overflow-hidden">
+      {/* Background Decorative River Horizon */}
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-950 via-slate-950 to-slate-900 pointer-events-none" />
+      <div className="absolute top-1/3 w-full h-px bg-slate-800" />
+      <div className="absolute bottom-0 w-full h-24 bg-gradient-to-t from-sky-950/40 to-transparent" />
+
+      {/* Top Controls Bar */}
+      <div className="w-full max-w-2xl flex items-center justify-between z-10">
+        <div className="flex items-center gap-2 text-xs font-pixel-tc text-slate-400">
+          <Shield className="w-4 h-4 text-emerald-400" />
+          <span>傷心湯 · 河川環境保護行動</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenInstructions}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-pixel-tc text-slate-300 transition-colors"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+            <span>玩法指南</span>
+          </button>
+
+          <button
+            onClick={handleToggleMute}
+            className="p-2 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 transition-colors"
+            title="音效開關"
+          >
+            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Center Game Logo & Hero Title */}
+      <div className="z-10 text-center my-auto space-y-6 max-w-lg w-full">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-pixel">
+            LEVEL 1: 傷心湯 (SAD SOUP)
+          </div>
+
+          <h1 className="text-3xl md:text-5xl font-black font-pixel-tc text-white tracking-wider drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+            醜泥怪：河川守護者
+          </h1>
+          <p className="text-xs md:text-sm font-pixel-tc text-slate-400">
+            接取掉落垃圾 · 淨化河川水質 · 7連擊變身米多力
+          </p>
+        </div>
+
+        {/* Character Avatar Icon Pixel Preview */}
+        <div className="flex items-center justify-center gap-6 py-2">
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-16 h-16 rounded-xl bg-slate-900/80 border-2 border-amber-800/80 flex items-center justify-center text-3xl shadow-lg">
+              👾
+            </div>
+            <span className="text-[11px] font-pixel-tc text-amber-400 font-bold">醜泥怪 (一般)</span>
+          </div>
+          <span className="text-amber-500 font-pixel text-sm">→ 7連擊 →</span>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-16 h-16 rounded-xl bg-slate-900/80 border-2 border-emerald-500/80 flex items-center justify-center text-3xl shadow-lg shadow-emerald-950/50">
+              ✨
+            </div>
+            <span className="text-[11px] font-pixel-tc text-emerald-400 font-bold">米多力 (無敵)</span>
+          </div>
+        </div>
+
+        {/* Nickname Input & Start Form */}
+        <form onSubmit={handleStart} className="space-y-4 bg-slate-900/90 p-5 rounded-xl border border-slate-800 shadow-xl">
+          <div className="text-left space-y-1.5">
+            <label className="text-xs font-pixel-tc text-slate-300 font-medium flex items-center justify-between">
+              <span>守護者暱稱（2–12 字元）</span>
+              <span className="text-[11px] text-slate-500">{nickname.trim().length} / 12</span>
+            </label>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => {
+                onNicknameChange(e.target.value);
+                if (errorMsg) setErrorMsg('');
+              }}
+              placeholder="請輸入你的暱稱..."
+              maxLength={12}
+              className="w-full px-4 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-white font-pixel-tc text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+            />
+            {errorMsg && (
+              <p className="text-xs font-pixel-tc text-red-400 font-semibold">{errorMsg}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button
+              type="submit"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-pixel-tc text-sm transition-all shadow-lg shadow-amber-500/20 active:translate-y-0.5 cursor-pointer"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>開始守護河川</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                onOpenLeaderboard();
+              }}
+              className="flex items-center justify-center gap-2 py-3 px-5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 font-pixel-tc text-sm transition-colors cursor-pointer"
+            >
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>雲端排行榜</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Footer Info */}
+      <div className="z-10 text-center text-[11px] font-pixel-tc text-slate-500 pt-4">
+        <span>鍵盤 A/D 或 ←/→ 移動 · 手機直接觸控拖曳 · 保持河川清澈</span>
+      </div>
+    </div>
+  );
+};

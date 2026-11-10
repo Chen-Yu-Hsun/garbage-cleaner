@@ -1,0 +1,6 @@
+{
+  "name": "醜泥怪：河川守護者",
+  "description": "2D 像素風格網頁遊戲《醜泥怪：河川守護者》第一關「傷心湯」——操作醜泥怪在橋下接取掉落垃圾，淨化河川、累積連擊變身米多力，守護美麗河川！",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
