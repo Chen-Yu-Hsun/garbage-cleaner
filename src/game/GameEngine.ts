@@ -148,11 +148,12 @@ export class GameEngine {
 
   private initPedestrians() {
     this.pedestrians = [
-      { id: 'p1', type: 'child', x: 200, y: 88, direction: 1, speed: 45, walkFrame: 0, color: '#0284c7', balloonColor: '#ef4444' },
-      { id: 'p2', type: 'adult', x: 450, y: 88, direction: -1, speed: 50, walkFrame: 2, color: '#475569' },
-      { id: 'p3', type: 'dog', x: 170, y: 91, direction: 1, speed: 65, walkFrame: 1, color: '#b45309' },
-      { id: 'p4', type: 'elder', x: 720, y: 88, direction: -1, speed: 30, walkFrame: 0, color: '#57534e' },
-      { id: 'p5', type: 'teen', x: 600, y: 88, direction: 1, speed: 55, walkFrame: 3, color: '#9333ea' },
+      { id: 'p1', type: 'child', x: 220, y: 104, direction: 1, speed: 42, walkFrame: 0, color: '#0284c7', balloonColor: '#ef4444' },
+      { id: 'p2', type: 'cart', x: 480, y: 104, direction: 1, speed: 32, walkFrame: 0, color: '#ea580c', balloonColor: '#facc15' },
+      { id: 'p3', type: 'dog', x: 170, y: 106, direction: 1, speed: 60, walkFrame: 1, color: '#b45309' },
+      { id: 'p4', type: 'adult', x: 680, y: 104, direction: -1, speed: 46, walkFrame: 2, color: '#475569' },
+      { id: 'p5', type: 'elder', x: 820, y: 104, direction: -1, speed: 28, walkFrame: 0, color: '#57534e' },
+      { id: 'p6', type: 'teen', x: 360, y: 104, direction: -1, speed: 52, walkFrame: 3, color: '#9333ea' },
     ];
   }
 

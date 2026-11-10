@@ -199,30 +199,32 @@ export default function App() {
     setFlowState('START_SCREEN');
   }, []);
 
-  // Touch / Pointer controls on Canvas
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!engineRef.current || flowState !== 'PLAYING') return;
+  // Touch / Pointer controls on Canvas (Accurate for full-bleed object-cover)
+  const getCanvasCoords = (clientX: number) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !engineRef.current) return 480;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = engineRef.current.V_WIDTH / rect.width;
-    const clientX = (e.clientX - rect.left) * scaleX;
+    const vWidth = engineRef.current.V_WIDTH;
+    const vHeight = engineRef.current.V_HEIGHT;
 
+    const scale = Math.max(rect.width / vWidth, rect.height / vHeight);
+    const renderedW = vWidth * scale;
+    const offsetX = (renderedW - rect.width) / 2;
+
+    const canvasX = (clientX - rect.left + offsetX) / scale;
+    return Math.max(engineRef.current.PLAY_MIN_X, Math.min(engineRef.current.PLAY_MAX_X, canvasX));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!engineRef.current || flowState !== 'PLAYING') return;
     engineRef.current.isTouching = true;
-    engineRef.current.targetTouchX = clientX;
+    engineRef.current.targetTouchX = getCanvasCoords(e.clientX);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!engineRef.current || !engineRef.current.isTouching) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = engineRef.current.V_WIDTH / rect.width;
-    const clientX = (e.clientX - rect.left) * scaleX;
-
-    engineRef.current.targetTouchX = clientX;
+    engineRef.current.targetTouchX = getCanvasCoords(e.clientX);
   };
 
   const handlePointerUp = () => {
@@ -232,19 +234,9 @@ export default function App() {
   };
 
   return (
-    <main
-      className={`w-screen h-screen flex flex-col items-center justify-center pencil-paper-bg overflow-hidden select-none ${
-        flowState === 'INTRO_VIDEO' ? 'p-0' : 'p-0 sm:p-2 md:p-4'
-      }`}
-    >
-      {/* Dynamically Responsive Container - Full-bleed (滿板) for intro video */}
-      <div
-        className={`relative w-full h-full flex items-center justify-center overflow-hidden transition-all duration-300 ${
-          flowState === 'INTRO_VIDEO'
-            ? 'w-full h-full max-w-none max-h-none rounded-none border-0 shadow-none bg-black'
-            : 'max-w-[1280px] max-h-[96vh] sm:aspect-[16/9] bg-[#fcf8f0] sm:rounded-2xl border-0 sm:border-[3.5px] border-[#3d3228] shadow-[4px_6px_0px_#3d3228,0_18px_40px_rgba(60,45,30,0.28)] pencil-viewport-overlay'
-        }`}
-      >
+    <main className="w-screen h-screen p-0 m-0 overflow-hidden select-none bg-black flex items-center justify-center">
+      {/* Full-bleed Container (滿板無死角，徹底去除上下與左右空白) */}
+      <div className="relative w-full h-full overflow-hidden flex items-center justify-center">
         {/* Intro Cutscene State (滿板影片 + 開播時布幕拉起特效) */}
         {flowState === 'INTRO_VIDEO' && (
           <IntroCutscene
@@ -270,7 +262,7 @@ export default function App() {
           />
         )}
 
-        {/* Game Canvas Viewport */}
+        {/* Game Canvas Viewport - Full Bleed (滿板) without top/bottom letterboxes */}
         <div
           className={`relative w-full h-full ${
             flowState === 'PLAYING' || flowState === 'GAME_OVER' ? 'block' : 'hidden'
@@ -284,7 +276,7 @@ export default function App() {
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerUp}
-            className="w-full h-full object-contain cursor-crosshair touch-none"
+            className="w-full h-full object-cover cursor-crosshair touch-none"
           />
 
           {/* Active Gameplay HUD */}

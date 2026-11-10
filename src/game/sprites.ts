@@ -972,18 +972,75 @@ export function drawRaindrop(
 /**
  * Draw Pedestrians on the Bridge (with sketchy pencil outlines)
  */
+/**
+ * Draw Pedestrians on the Bridge (Enlarged with rich colored-pencil details)
+ */
 export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
   ctx.save();
   ctx.translate(Math.floor(p.x), Math.floor(p.y));
-  ctx.scale(p.direction, 1);
+  // Enlarged 2.3x for prominent, lively bridge street life (matches user request)
+  ctx.scale(p.direction * 2.3, 2.3);
 
-  const bob = Math.sin(p.walkFrame * 8) * 2;
-  const legSwing = Math.sin(p.walkFrame * 8) * 4;
+  const bob = Math.sin(p.walkFrame * 8) * 1.8;
+  const legSwing = Math.sin(p.walkFrame * 8) * 3.5;
   ctx.strokeStyle = '#26201b';
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 0.9;
 
   switch (p.type) {
+    case 'cart': {
+      // Little snack / souvenir wagon cart on wheels with festive floating balloon
+      const cartBob = Math.sin(p.walkFrame * 6) * 1.2;
+      // Wooden cart chest
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(-14, -14 + cartBob, 28, 11);
+      ctx.strokeRect(-14, -14 + cartBob, 28, 11);
+      // Striped awning / package top
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-12, -22 + cartBob, 24, 8);
+      ctx.strokeRect(-12, -22 + cartBob, 24, 8);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(-7, -20 + cartBob, 5, 5);
+      ctx.fillRect(2, -20 + cartBob, 5, 5);
+      // Spoked wheels
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.arc(-8, -3, 4, 0, Math.PI * 2);
+      ctx.arc(8, -3, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Cart handle
+      ctx.strokeStyle = '#292524';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(-14, -12 + cartBob);
+      ctx.lineTo(-20, -18 + cartBob);
+      ctx.stroke();
+      // Floating festive balloon tied to cart
+      if (p.balloonColor) {
+        ctx.strokeStyle = '#57534e';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(8, -22 + cartBob);
+        ctx.quadraticCurveTo(12, -38 + cartBob, 10, -48 + cartBob * 0.5);
+        ctx.stroke();
+        // Balloon
+        ctx.fillStyle = p.balloonColor;
+        ctx.strokeStyle = '#26201b';
+        ctx.beginPath();
+        ctx.arc(10, -56 + cartBob * 0.5, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Highlight reflection
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.beginPath();
+        ctx.arc(8, -58 + cartBob * 0.5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+
     case 'dog': {
+      // Golden retriever / shiba inu dog
       ctx.fillStyle = '#c27125';
       ctx.fillRect(-10, -10 + bob, 20, 10);
       ctx.strokeRect(-10, -10 + bob, 20, 10);
@@ -991,52 +1048,67 @@ export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
       ctx.strokeRect(8, -16 + bob, 8, 8);
       ctx.fillRect(16, -13 + bob, 4, 4);
       ctx.fillStyle = '#1e1b18';
-      ctx.fillRect(19, -13 + bob, 2, 2);
+      ctx.fillRect(19, -13 + bob, 2, 2); // nose
       ctx.fillStyle = '#78350f';
-      ctx.fillRect(9, -16 + bob, 3, 5);
+      ctx.fillRect(9, -16 + bob, 3, 5); // ear
+      // Collar
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(7, -11 + bob, 2, 6);
+      // Wagging tail
+      const tailWag = Math.sin(p.walkFrame * 14) * 3;
       ctx.fillStyle = '#c27125';
-      ctx.fillRect(-13, -14 + bob, 3, 5);
+      ctx.fillRect(-13, -14 + bob + tailWag, 3, 6);
       ctx.fillRect(-8 + legSwing, 0, 3, 5);
       ctx.fillRect(4 - legSwing, 0, 3, 5);
       break;
     }
 
     case 'child': {
+      // Child holding high-flying red balloon
       ctx.fillStyle = '#f5d0a9';
-      ctx.fillRect(-4, -22 + bob, 8, 8);
+      ctx.fillRect(-4, -22 + bob, 8, 8); // head
       ctx.strokeRect(-4, -22 + bob, 8, 8);
       ctx.fillStyle = '#e11d48';
-      ctx.fillRect(-5, -24 + bob, 10, 3);
+      ctx.fillRect(-5, -24 + bob, 10, 3); // hat
       ctx.fillStyle = p.color;
-      ctx.fillRect(-4, -14 + bob, 8, 10);
+      ctx.fillRect(-4, -14 + bob, 8, 10); // coat
       ctx.strokeRect(-4, -14 + bob, 8, 10);
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(-3 + legSwing, -4, 3, 6);
       ctx.fillRect(1 - legSwing, -4, 3, 6);
+      // High-flying colored-pencil balloon
       if (p.balloonColor) {
         ctx.strokeStyle = '#57534e';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
         ctx.moveTo(2, -10 + bob);
-        ctx.lineTo(-6, -34 + bob * 0.5);
+        ctx.quadraticCurveTo(-2, -32 + bob, -6, -46 + bob * 0.5);
         ctx.stroke();
+        // Balloon
         ctx.fillStyle = p.balloonColor;
         ctx.strokeStyle = '#26201b';
         ctx.beginPath();
-        ctx.arc(-8, -40 + bob * 0.5, 6, 0, Math.PI * 2);
+        ctx.arc(-7, -54 + bob * 0.5, 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+        // Highlight reflection
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.beginPath();
+        ctx.arc(-9, -56 + bob * 0.5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
       }
       break;
     }
 
     case 'elder': {
+      // Elder with walking cane
       ctx.fillStyle = '#d6d3d1';
       ctx.fillRect(-5, -28 + bob, 8, 8);
       ctx.strokeRect(-5, -28 + bob, 8, 8);
       ctx.fillStyle = '#57534e';
       ctx.fillRect(-5, -20 + bob, 10, 14);
       ctx.strokeRect(-5, -20 + bob, 10, 14);
+      // Walking cane
       ctx.fillStyle = '#92400e';
       ctx.fillRect(8, -16 + bob, 2, 20);
       ctx.fillRect(6, -18 + bob, 4, 2);
@@ -1047,14 +1119,15 @@ export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
     }
 
     case 'teen': {
+      // Teenager with hoodie & headphones
       ctx.fillStyle = '#fde047';
-      ctx.fillRect(-5, -28 + bob, 9, 8);
+      ctx.fillRect(-5, -28 + bob, 9, 8); // hair
       ctx.strokeRect(-5, -28 + bob, 9, 8);
-      ctx.fillStyle = '#0284c7';
+      ctx.fillStyle = '#0284c7'; // headphones
       ctx.fillRect(-6, -26 + bob, 2, 5);
       ctx.fillRect(3, -26 + bob, 2, 5);
       ctx.fillRect(-6, -29 + bob, 11, 2);
-      ctx.fillStyle = p.color;
+      ctx.fillStyle = p.color; // jacket
       ctx.fillRect(-6, -20 + bob, 12, 14);
       ctx.strokeRect(-6, -20 + bob, 12, 14);
       ctx.fillStyle = '#1e293b';
@@ -1065,15 +1138,20 @@ export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
 
     case 'adult':
     default: {
+      // Adult holding takeaway cup
       ctx.fillStyle = '#44403c';
-      ctx.fillRect(-5, -30 + bob, 9, 8);
+      ctx.fillRect(-5, -30 + bob, 9, 8); // hair
       ctx.strokeRect(-5, -30 + bob, 9, 8);
-      ctx.fillStyle = p.color;
+      ctx.fillStyle = p.color; // coat
       ctx.fillRect(-6, -22 + bob, 12, 15);
       ctx.strokeRect(-6, -22 + bob, 12, 15);
-      ctx.fillStyle = '#334155';
+      ctx.fillStyle = '#334155'; // pants
       ctx.fillRect(-4 + legSwing, -7, 4, 9);
       ctx.fillRect(1 - legSwing, -7, 4, 9);
+      // Holding drink cup
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(7, -18 + bob, 4, 6);
+      ctx.strokeRect(7, -18 + bob, 4, 6);
       break;
     }
   }
@@ -1420,6 +1498,34 @@ function getColoredPencilSceneBackdrop(
   ctx.textAlign = 'center';
   ctx.fillText('傷心湯', 36, bridgeTop + 42);
   ctx.restore();
+
+  // 5b. Street Recycling & Waste Bins on Bridge (matches mockup illustration)
+  const drawBridgeBin = (bx: number, by: number, color: string, lidColor: string) => {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.fillRect(bx, by, 16, 24);
+    ctx.strokeStyle = '#26201b';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(bx, by, 16, 24);
+    // Bin Lid
+    ctx.fillStyle = lidColor;
+    ctx.fillRect(bx - 2, by - 5, 20, 6);
+    ctx.strokeRect(bx - 2, by - 5, 20, 6);
+    // Bin Wheels
+    ctx.fillStyle = '#1c1917';
+    ctx.fillRect(bx + 1, by + 22, 4, 4);
+    ctx.fillRect(bx + 11, by + 22, 4, 4);
+    // Bin Label / Recycling Mark
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 4, by + 6, 8, 9);
+    ctx.restore();
+  };
+
+  // Blue recycling station on left bridge (x: 180)
+  drawBridgeBin(180, bridgeTop - 18, '#0284c7', '#0369a1');
+  // Green general waste station on right bridge (x: 740)
+  drawBridgeBin(740, bridgeTop - 18, '#16a34a', '#14532d');
 
   // 6. Colored-Pencil Base River Water (y: 430..540)
   const riverHeight = height - riverTop;

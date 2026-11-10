@@ -87,7 +87,7 @@ export interface FloatingText {
 
 export interface Pedestrian {
   id: string;
-  type: 'elder' | 'child' | 'teen' | 'adult' | 'dog';
+  type: 'elder' | 'child' | 'teen' | 'adult' | 'dog' | 'cart';
   x: number;
   y: number;
   direction: 1 | -1;
