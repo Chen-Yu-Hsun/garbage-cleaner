@@ -1160,8 +1160,8 @@ export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
 }
 
 /**
- * Cache offscreen static colored-pencil background per WaterQuality
- * so complex diagonal pencil hatching renders at 60fps with zero overhead.
+ * Cache offscreen static 3D stereoscopic colored-pencil background per WaterQuality
+ * Pre-renders 3D extruded masonry blocks, perspective side slopes, and structural bridge corbels.
  */
 const sceneBackgroundCache: Partial<Record<WaterQuality, HTMLCanvasElement>> = {};
 
@@ -1182,11 +1182,11 @@ function getColoredPencilSceneBackdrop(
   const rand = seededRandom(waterQuality === 'BLUE' ? 777 : waterQuality === 'GREY' ? 888 : 999);
   const bridgeTop = 90;
   const bridgeHeight = 45;
-  const wallTop = bridgeTop + bridgeHeight; // 135 (Exactly 540 / 4 = 1/4 of total screen height!)
+  const wallTop = bridgeTop + bridgeHeight; // 135 (1/4 of 540)
   const riverTop = 430;
   const wallHeight = riverTop - wallTop; // 295
 
-  // 1. Hand-Drawn Colored Pencil Sky (y: 0..75)
+  // 1. 3D Hand-Drawn Colored Pencil Sky (y: 0..90) with subtle atmospheric depth gradient
   const skyColors =
     waterQuality === 'BLUE'
       ? ['#60a5fa', '#3b82f6', '#93c5fd', '#2563eb', '#7dd3fc']
@@ -1197,7 +1197,14 @@ function getColoredPencilSceneBackdrop(
 
   fillColoredPencilRect(ctx, 0, 0, width, bridgeTop + 4, skyPaper, skyColors, -32, 2.8, 0.58, 101);
 
-  // 2. Fluffy Colored-Pencil Green Bushes along the Bridge Horizon (y: 38..75)
+  // Atmospheric sky horizon glow
+  const skyHaze = ctx.createLinearGradient(0, 0, 0, bridgeTop);
+  skyHaze.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  skyHaze.addColorStop(1, waterQuality === 'BLUE' ? 'rgba(235, 245, 255, 0.35)' : 'rgba(200, 200, 200, 0.2)');
+  ctx.fillStyle = skyHaze;
+  ctx.fillRect(0, 0, width, bridgeTop);
+
+  // 2. Fluffy Colored-Pencil Green Bushes along Horizon (y: 48..90)
   const bushColors =
     waterQuality === 'BLUE'
       ? ['#4ade80', '#22c55e', '#16a34a', '#86efac', '#15803d']
@@ -1210,32 +1217,13 @@ function getColoredPencilSceneBackdrop(
   ctx.beginPath();
   ctx.moveTo(0, bridgeTop);
   const moundPositions = [
-    { x: 18, r: 24 },
-    { x: 52, r: 28 },
-    { x: 88, r: 22 },
-    { x: 122, r: 26 },
-    { x: 158, r: 30 },
-    { x: 196, r: 23 },
-    { x: 232, r: 25 },
-    { x: 268, r: 29 },
-    { x: 306, r: 22 },
-    { x: 342, r: 27 },
-    { x: 382, r: 31 },
-    { x: 420, r: 24 },
-    { x: 458, r: 26 },
-    { x: 496, r: 29 },
-    { x: 534, r: 23 },
-    { x: 570, r: 27 },
-    { x: 608, r: 31 },
-    { x: 648, r: 25 },
-    { x: 684, r: 22 },
-    { x: 720, r: 28 },
-    { x: 758, r: 26 },
-    { x: 796, r: 30 },
-    { x: 834, r: 24 },
-    { x: 870, r: 27 },
-    { x: 908, r: 29 },
-    { x: 945, r: 25 },
+    { x: 18, r: 24 }, { x: 52, r: 28 }, { x: 88, r: 22 }, { x: 122, r: 26 },
+    { x: 158, r: 30 }, { x: 196, r: 23 }, { x: 232, r: 25 }, { x: 268, r: 29 },
+    { x: 306, r: 22 }, { x: 342, r: 27 }, { x: 382, r: 31 }, { x: 420, r: 24 },
+    { x: 458, r: 26 }, { x: 496, r: 29 }, { x: 534, r: 23 }, { x: 570, r: 27 },
+    { x: 608, r: 31 }, { x: 648, r: 25 }, { x: 684, r: 22 }, { x: 720, r: 28 },
+    { x: 758, r: 26 }, { x: 796, r: 30 }, { x: 834, r: 24 }, { x: 870, r: 27 },
+    { x: 908, r: 29 }, { x: 945, r: 25 },
   ];
   for (const m of moundPositions) {
     ctx.arc(m.x, bridgeTop - 2, m.r, Math.PI, 0, false);
@@ -1244,22 +1232,10 @@ function getColoredPencilSceneBackdrop(
   ctx.closePath();
   ctx.clip();
 
-  fillColoredPencilRect(
-    ctx,
-    0,
-    bridgeTop - 36,
-    width,
-    38,
-    waterQuality === 'BLACK' ? '#27272a' : '#ecfccb',
-    bushColors,
-    -36,
-    2.4,
-    0.72,
-    202
-  );
+  fillColoredPencilRect(ctx, 0, bridgeTop - 36, width, 38, waterQuality === 'BLACK' ? '#27272a' : '#ecfccb', bushColors, -36, 2.4, 0.72, 202);
   ctx.restore();
 
-  // Sketchy green pencil outline along bush tops
+  // Bush outline strokes
   ctx.save();
   ctx.strokeStyle = bushOutline;
   ctx.lineWidth = 1.6;
@@ -1271,8 +1247,7 @@ function getColoredPencilSceneBackdrop(
   }
   ctx.restore();
 
-  // 3. Under-Bridge Square-Tiled Cream Embankment Wall (x: 75..885, y: 115..430)
-  // Matches the square stone grid wall in the reference illustration!
+  // 3. 3D Under-Bridge Embankment Wall & 3D Stone Block Relief (x: 75..885, y: 135..430)
   const wallLeft = 75;
   const wallRight = width - 75; // 885
   const wallW = wallRight - wallLeft; // 810
@@ -1290,110 +1265,65 @@ function getColoredPencilSceneBackdrop(
       ? ['#d6d3d1', '#a8a29e', '#e7e5e4']
       : ['#292524', '#44403c', '#1c1917'];
 
-  fillColoredPencilRect(
-    ctx,
-    wallLeft,
-    wallTop,
-    wallW,
-    wallHeight,
-    wallPaper,
-    wallPencilColors,
-    -33,
-    3.0,
-    0.58,
-    303
-  );
+  // Base colored pencil wall wash
+  fillColoredPencilRect(ctx, wallLeft, wallTop, wallW, wallHeight, wallPaper, wallPencilColors, -33, 3.0, 0.58, 303);
 
-  // Subtle individual tile shading variations & hand-drawn grid lines
-  const gridLineColor =
-    waterQuality === 'BLACK' ? 'rgba(20, 16, 14, 0.55)' : 'rgba(155, 132, 106, 0.58)';
-
+  // 3D Extruded Stone Tile Blocks (Beveled 3D Relief)
+  const blockGap = 2.5;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const tx = wallLeft + c * tileW;
-      const ty = wallTop + r * tileH;
-      // Slight warm tint in alternating tiles
-      if ((r + c) % 2 === 0) {
-        ctx.fillStyle =
-          waterQuality === 'BLACK'
-            ? 'rgba(0, 0, 0, 0.08)'
-            : 'rgba(210, 182, 145, 0.12)';
-        ctx.fillRect(tx + 2, ty + 2, tileW - 4, tileH - 4);
+      const bx = wallLeft + c * tileW + blockGap;
+      const by = wallTop + r * tileH + blockGap;
+      const bw = tileW - blockGap * 2;
+      const bh = tileH - blockGap * 2;
+
+      // 1. Recessed dark mortar groove
+      ctx.fillStyle = waterQuality === 'BLACK' ? '#14110e' : '#3a2718';
+      ctx.fillRect(bx - 1.5, by - 1.5, bw + 3, bh + 3);
+
+      // 2. Block face with masonry tone variation
+      const blockSeed = (r * 17 + c * 31) % 5;
+      const blockTint =
+        waterQuality === 'BLUE'
+          ? ['#fbf2e3', '#f4e6d2', '#fcf4e8', '#efe0ca', '#f8eee0'][blockSeed]
+          : waterQuality === 'GREY'
+          ? ['#e6e4df', '#ddd9d4', '#f1eee9', '#d5d0ca', '#ebe8e2'][blockSeed]
+          : ['#352e27', '#2e2722', '#3a322b', '#26201b', '#3e362e'][blockSeed];
+      ctx.fillStyle = blockTint;
+      ctx.fillRect(bx, by, bw, bh);
+
+      // 3. 3D Highlights on Top and Left edges
+      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 245, 0.88)';
+      ctx.fillRect(bx, by, bw, 2.5); // Top highlight ledge
+
+      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 250, 220, 0.55)';
+      ctx.fillRect(bx, by, 2.2, bh); // Left highlight edge
+
+      // 4. 3D Cast Shadows on Bottom and Right edges (creates physical block thickness)
+      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(0, 0, 0, 0.75)' : 'rgba(45, 28, 14, 0.68)';
+      ctx.fillRect(bx, by + bh - 3.5, bw, 3.5); // Bottom shadow
+
+      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(45, 28, 14, 0.52)';
+      ctx.fillRect(bx + bw - 2.8, by, 2.8, bh); // Right shadow
+
+      // 5. Delicate hand-drawn colored-pencil shading hatching on each block
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(bx + 2, by + 2, bw - 4, bh - 4);
+      ctx.clip();
+      ctx.strokeStyle = waterQuality === 'BLACK' ? 'rgba(255,255,255,0.03)' : 'rgba(150, 110, 70, 0.14)';
+      ctx.lineWidth = 1.0;
+      for (let s = -bw; s < bw + bh; s += 8) {
+        ctx.beginPath();
+        ctx.moveTo(bx + s, by);
+        ctx.lineTo(bx + s + bh, by + bh);
+        ctx.stroke();
       }
+      ctx.restore();
     }
   }
 
-  // Hand-drawn horizontal & vertical mortar lines for the square tile grid
-  for (let r = 1; r < rows; r++) {
-    const ly = wallTop + r * tileH;
-    drawSketchyLine(ctx, wallLeft, ly, wallRight, ly, gridLineColor, 1.4, rand);
-  }
-  for (let c = 1; c < cols; c++) {
-    const lx = wallLeft + c * tileW;
-    drawSketchyLine(ctx, lx, wallTop, lx, riverTop, gridLineColor, 1.4, rand);
-  }
-
-  // Under-bridge cast shadow along top of tile wall
-  ctx.fillStyle =
-    waterQuality === 'BLACK' ? 'rgba(0, 0, 0, 0.45)' : 'rgba(110, 75, 40, 0.24)';
-  ctx.fillRect(wallLeft, wallTop, wallW, 9);
-
-  // Hanging green moss on top-left and top-right corners under bridge (matches mockup)
-  const mossFill =
-    waterQuality === 'BLUE'
-      ? ['#658a3b', '#84a955', '#4d6e27']
-      : waterQuality === 'GREY'
-      ? ['#6b7280', '#9ca3af']
-      : ['#3f3f46', '#27272a'];
-
-  // Left corner moss cluster
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(wallLeft, wallTop);
-  ctx.lineTo(wallLeft + 20, wallTop);
-  ctx.quadraticCurveTo(wallLeft + 18, wallTop + 38, wallLeft + 11, wallTop + 52);
-  ctx.quadraticCurveTo(wallLeft + 6, wallTop + 72, wallLeft, wallTop + 88);
-  ctx.closePath();
-  ctx.clip();
-  fillColoredPencilRect(ctx, wallLeft, wallTop, 22, 90, '#d9f99d', mossFill, -40, 2.0, 0.85, 404);
-  ctx.restore();
-  drawSketchyLine(ctx, wallLeft + 16, wallTop, wallLeft + 4, wallTop + 82, '#3f5a1d', 1.4, rand);
-
-  // Right corner moss cluster
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(wallRight, wallTop);
-  ctx.lineTo(wallRight - 20, wallTop);
-  ctx.quadraticCurveTo(wallRight - 18, wallTop + 38, wallRight - 11, wallTop + 52);
-  ctx.quadraticCurveTo(wallRight - 6, wallTop + 72, wallRight, wallTop + 88);
-  ctx.closePath();
-  ctx.clip();
-  fillColoredPencilRect(
-    ctx,
-    wallRight - 22,
-    wallTop,
-    22,
-    90,
-    '#d9f99d',
-    mossFill,
-    -40,
-    2.0,
-    0.85,
-    405
-  );
-  ctx.restore();
-  drawSketchyLine(
-    ctx,
-    wallRight - 16,
-    wallTop,
-    wallRight - 4,
-    wallTop + 82,
-    '#3f5a1d',
-    1.4,
-    rand
-  );
-
-  // 4. Warm Brown Colored-Pencil Stone Bridge Deck (y: 75..115) & Side Piers
+  // 4. 3D Bridge Structure, Overhead Fascia, Recessed Soffit & 3D Corbels
   const bridgePaper = waterQuality === 'BLACK' ? '#3b322b' : '#f2dfc8';
   const bridgePencils =
     waterQuality === 'BLUE'
@@ -1403,105 +1333,210 @@ function getColoredPencilSceneBackdrop(
       : ['#44403c', '#292524', '#1c1917'];
   const stoneOutline = waterQuality === 'BLACK' ? '#1c1917' : '#4a2c14';
 
-  // Bridge horizontal deck
-  fillColoredPencilRect(
-    ctx,
-    0,
-    bridgeTop,
-    width,
-    bridgeHeight,
-    bridgePaper,
-    bridgePencils,
-    -34,
-    2.4,
-    0.78,
-    505
-  );
+  // Upper Bridge deck & parapet (y: 90..116)
+  fillColoredPencilRect(ctx, 0, bridgeTop, width, 26, bridgePaper, bridgePencils, -34, 2.4, 0.78, 505);
 
-  // Left Pier (x: 0..75, y: 75..430)
-  fillColoredPencilRect(
-    ctx,
-    0,
-    bridgeTop,
-    wallLeft,
-    riverTop - bridgeTop,
-    bridgePaper,
-    bridgePencils,
-    -34,
-    2.4,
-    0.8,
-    506
-  );
-
-  // Right Pier (x: 885..960, y: 75..430)
-  fillColoredPencilRect(
-    ctx,
-    wallRight,
-    bridgeTop,
-    width - wallRight,
-    riverTop - bridgeTop,
-    bridgePaper,
-    bridgePencils,
-    -34,
-    2.4,
-    0.8,
-    507
-  );
-
-  // Hand-drawn stone blocks on bridge deck
+  // Hand-drawn stone block courses on upper parapet
   drawSketchyLine(ctx, 0, bridgeTop, width, bridgeTop, stoneOutline, 2.4, rand);
   drawSketchyLine(ctx, 0, bridgeTop + 6, width, bridgeTop + 6, stoneOutline, 1.5, rand);
-  drawSketchyLine(ctx, wallLeft, wallTop, wallRight, wallTop, stoneOutline, 2.4, rand);
-
-  for (let bx = wallLeft; bx <= wallRight; bx += 54) {
-    drawSketchyLine(ctx, bx, bridgeTop + 6, bx, wallTop, stoneOutline, 1.4, rand);
+  drawSketchyLine(ctx, 0, bridgeTop + 24, width, bridgeTop + 24, stoneOutline, 2.0, rand);
+  for (let bx = 0; bx <= width; bx += 48) {
+    drawSketchyLine(ctx, bx, bridgeTop + 6, bx, bridgeTop + 24, stoneOutline, 1.4, rand);
   }
 
-  // Hand-drawn stone courses on Left & Right Piers
-  drawSketchyLine(ctx, wallLeft, wallTop, wallLeft, riverTop, stoneOutline, 2.4, rand);
-  drawSketchyLine(ctx, wallRight, wallTop, wallRight, riverTop, stoneOutline, 2.4, rand);
+  // 3D Projecting Coping Cornice / Overhang Ledge (y: 114..122)
+  ctx.fillStyle = waterQuality === 'BLACK' ? '#2e2620' : '#eedec8';
+  ctx.fillRect(0, 114, width, 8);
+  ctx.fillStyle = 'rgba(255, 255, 245, 0.95)';
+  ctx.fillRect(0, 114, width, 2.5); // Top bright sun highlight
+  ctx.fillStyle = 'rgba(30, 18, 8, 0.75)';
+  ctx.fillRect(0, 120, width, 2.5); // Bottom overhang cast shadow
 
-  for (let py = wallTop + 26; py < riverTop; py += 32) {
-    drawSketchyLine(ctx, 0, py, wallLeft, py, stoneOutline, 1.4, rand);
-    drawSketchyLine(ctx, wallRight, py, width, py, stoneOutline, 1.4, rand);
+  // 3D Recessed Underside Soffit (y: 122..135)
+  ctx.fillStyle = waterQuality === 'BLACK' ? '#16120e' : '#422c1b';
+  ctx.fillRect(0, 122, width, 13);
+
+  // 3D Structural Stone Corbel Brackets with perspective side facets
+  const corbelXList = [95, 175, 255, 335, 415, 495, 575, 655, 735, 815, 895];
+  for (const cx of corbelXList) {
+    const cw = 18;
+    const ch = 14;
+    // Front facet
+    ctx.fillStyle = waterQuality === 'BLACK' ? '#382f26' : '#dfc4a2';
+    ctx.fillRect(cx, 121, cw, ch);
+    ctx.strokeStyle = '#281708';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(cx, 121, cw, ch);
+    // Top highlight
+    ctx.fillStyle = 'rgba(255, 255, 240, 0.75)';
+    ctx.fillRect(cx, 121, cw, 2);
+    // Left facet highlight
+    ctx.fillStyle = 'rgba(255, 250, 220, 0.55)';
+    ctx.fillRect(cx, 121, 2.5, ch);
+    // Triangular 3D drop shadow cast down onto the stone wall
+    ctx.fillStyle = 'rgba(20, 12, 5, 0.52)';
+    ctx.beginPath();
+    ctx.moveTo(cx + cw, 121 + ch);
+    ctx.lineTo(cx + cw + 15, 121 + ch + 24);
+    ctx.lineTo(cx, 121 + ch);
+    ctx.closePath();
+    ctx.fill();
   }
 
-  // 5. Wooden Scenic River Sign "傷心湯" on Left Pier (clean, no stage subtitle)
+  // Deep Bridge Overhang Ambient Occlusion Shadow along top of wall
+  const overhangGrad = ctx.createLinearGradient(0, wallTop, 0, wallTop + 42);
+  overhangGrad.addColorStop(0, 'rgba(15, 9, 4, 0.82)');
+  overhangGrad.addColorStop(0.35, 'rgba(30, 18, 8, 0.45)');
+  overhangGrad.addColorStop(1, 'rgba(40, 25, 12, 0)');
+  ctx.fillStyle = overhangGrad;
+  ctx.fillRect(wallLeft, wallTop, wallW, 42);
+
+  // 5. 3D Trapezoidal Retaining Walls (Side Piers with 3D Inner Sloping Perspective)
+  // Left Pier: Front column (x: 0..48) + 3D Receding Inner Sloping Face (x: 48..75 at top -> 48..54 at bottom)
+  fillColoredPencilRect(ctx, 0, bridgeTop + 24, 48, riverTop - (bridgeTop + 24), bridgePaper, bridgePencils, -34, 2.4, 0.8, 506);
+
+  // Left Pier 3D Inner Sloping Face
   ctx.save();
-  // Hanging cords
-  drawSketchyLine(ctx, 20, bridgeTop + 4, 20, bridgeTop + 20, '#3b220e', 2, rand);
-  drawSketchyLine(ctx, 52, bridgeTop + 4, 52, bridgeTop + 20, '#3b220e', 2, rand);
-
-  // Sign board - clean scenic plaque without redundant "第一關" subtitle
-  fillColoredPencilRect(
-    ctx,
-    6,
-    bridgeTop + 18,
-    60,
-    36,
-    '#ebd3b0',
-    ['#8c5828', '#73441b', '#a66d38'],
-    -30,
-    2.0,
-    0.85,
-    606
-  );
-  ctx.strokeStyle = '#3b220e';
-  ctx.lineWidth = 2.2;
-  ctx.strokeRect(6, bridgeTop + 18, 60, 36);
-  ctx.strokeStyle = 'rgba(255, 235, 200, 0.4)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(8, bridgeTop + 20, 56, 32);
-
-  ctx.fillStyle = '#fffbeb';
-  ctx.font = 'bold 16px "DotGothic16", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('傷心湯', 36, bridgeTop + 42);
+  ctx.beginPath();
+  ctx.moveTo(48, bridgeTop + 24);
+  ctx.lineTo(wallLeft, wallTop);
+  ctx.lineTo(wallLeft, riverTop);
+  ctx.lineTo(54, riverTop);
+  ctx.closePath();
+  ctx.fillStyle = waterQuality === 'BLACK' ? '#221b16' : '#9c6636';
+  ctx.fill();
+  // Inner sloping face shadow gradient (deepens into channel)
+  const leftSlopeGrad = ctx.createLinearGradient(48, 0, wallLeft, 0);
+  leftSlopeGrad.addColorStop(0, 'rgba(255, 250, 230, 0.2)');
+  leftSlopeGrad.addColorStop(1, 'rgba(20, 10, 4, 0.6)');
+  ctx.fillStyle = leftSlopeGrad;
+  ctx.fill();
+  ctx.strokeStyle = stoneOutline;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // 3D Perspective stone courses on inner slope
+  for (let py = wallTop + 24; py < riverTop; py += 32) {
+    ctx.beginPath();
+    ctx.moveTo(50, py - 4);
+    ctx.lineTo(wallLeft, py);
+    ctx.stroke();
+  }
   ctx.restore();
 
-  // 5b. Street Recycling & Waste Bins on Bridge (matches mockup illustration)
+  // Right Pier: 3D Receding Inner Sloping Face (x: 885..912 at top -> 906..912 at bottom) + Front column (x: 912..960)
+  fillColoredPencilRect(ctx, 912, bridgeTop + 24, width - 912, riverTop - (bridgeTop + 24), bridgePaper, bridgePencils, -34, 2.4, 0.8, 507);
+
+  // Right Pier 3D Inner Sloping Face
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(wallRight, wallTop);
+  ctx.lineTo(912, bridgeTop + 24);
+  ctx.lineTo(906, riverTop);
+  ctx.lineTo(wallRight, riverTop);
+  ctx.closePath();
+  ctx.fillStyle = waterQuality === 'BLACK' ? '#221b16' : '#8f5c2e';
+  ctx.fill();
+  // Right slope shadow gradient
+  const rightSlopeGrad = ctx.createLinearGradient(wallRight, 0, 912, 0);
+  rightSlopeGrad.addColorStop(0, 'rgba(20, 10, 4, 0.65)');
+  rightSlopeGrad.addColorStop(1, 'rgba(255, 250, 230, 0.15)');
+  ctx.fillStyle = rightSlopeGrad;
+  ctx.fill();
+  ctx.strokeStyle = stoneOutline;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  for (let py = wallTop + 24; py < riverTop; py += 32) {
+    ctx.beginPath();
+    ctx.moveTo(wallRight, py);
+    ctx.lineTo(910, py - 4);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Front Pier Corner Edge Highlights
+  ctx.strokeStyle = 'rgba(255, 255, 245, 0.65)';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.moveTo(48, bridgeTop + 24);
+  ctx.lineTo(54, riverTop);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#261507';
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(wallLeft, wallTop);
+  ctx.lineTo(wallLeft, riverTop);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(wallRight, wallTop);
+  ctx.lineTo(wallRight, riverTop);
+  ctx.stroke();
+
+  // 6. Corner Hanging Moss Clusters with 3D drop shadows
+  const mossFill =
+    waterQuality === 'BLUE'
+      ? ['#658a3b', '#84a955', '#4d6e27']
+      : waterQuality === 'GREY'
+      ? ['#6b7280', '#9ca3af']
+      : ['#3f3f46', '#27272a'];
+
+  // Left corner moss
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(wallLeft, wallTop);
+  ctx.lineTo(wallLeft + 24, wallTop);
+  ctx.quadraticCurveTo(wallLeft + 20, wallTop + 42, wallLeft + 12, wallTop + 58);
+  ctx.quadraticCurveTo(wallLeft + 6, wallTop + 78, wallLeft, wallTop + 96);
+  ctx.closePath();
+  ctx.clip();
+  fillColoredPencilRect(ctx, wallLeft, wallTop, 26, 98, '#d9f99d', mossFill, -40, 2.0, 0.85, 404);
+  ctx.restore();
+
+  // Right corner moss
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(wallRight, wallTop);
+  ctx.lineTo(wallRight - 24, wallTop);
+  ctx.quadraticCurveTo(wallRight - 20, wallTop + 42, wallRight - 12, wallTop + 58);
+  ctx.quadraticCurveTo(wallRight - 6, wallTop + 78, wallRight, wallTop + 96);
+  ctx.closePath();
+  ctx.clip();
+  fillColoredPencilRect(ctx, wallRight - 26, wallTop, 26, 98, '#d9f99d', mossFill, -40, 2.0, 0.85, 405);
+  ctx.restore();
+
+  // 7. Scenic Wooden River Sign "傷心湯" on Left Pier with 3D drop shadow
+  ctx.save();
+  // Hanging cords
+  drawSketchyLine(ctx, 16, bridgeTop + 4, 16, bridgeTop + 20, '#3b220e', 2, rand);
+  drawSketchyLine(ctx, 44, bridgeTop + 4, 44, bridgeTop + 20, '#3b220e', 2, rand);
+
+  // 3D Drop shadow of sign board
+  ctx.fillStyle = 'rgba(20, 10, 4, 0.45)';
+  ctx.fillRect(8, bridgeTop + 20, 54, 38);
+
+  // Sign board face
+  fillColoredPencilRect(ctx, 5, bridgeTop + 18, 54, 36, '#ebd3b0', ['#8c5828', '#73441b', '#a66d38'], -30, 2.0, 0.85, 606);
+  ctx.strokeStyle = '#3b220e';
+  ctx.lineWidth = 2.2;
+  ctx.strokeRect(5, bridgeTop + 18, 54, 36);
+  ctx.strokeStyle = 'rgba(255, 235, 200, 0.55)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(7, bridgeTop + 20, 50, 32);
+
+  ctx.fillStyle = '#fffbeb';
+  ctx.font = 'bold 15px "DotGothic16", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('傷心湯', 32, bridgeTop + 42);
+  ctx.restore();
+
+  // 8. Bridge Street Recycling & Waste Bins
   const drawBridgeBin = (bx: number, by: number, color: string, lidColor: string) => {
     ctx.save();
+    // Drop shadow under bin
+    ctx.fillStyle = 'rgba(20, 10, 4, 0.35)';
+    ctx.fillRect(bx - 1, by + 24, 18, 4);
+    // Bin body
     ctx.fillStyle = color;
     ctx.fillRect(bx, by, 16, 24);
     ctx.strokeStyle = '#26201b';
@@ -1515,19 +1550,17 @@ function getColoredPencilSceneBackdrop(
     ctx.fillStyle = '#1c1917';
     ctx.fillRect(bx + 1, by + 22, 4, 4);
     ctx.fillRect(bx + 11, by + 22, 4, 4);
-    // Bin Label / Recycling Mark
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    // Bin Recycling Mark
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.lineWidth = 1;
     ctx.strokeRect(bx + 4, by + 6, 8, 9);
     ctx.restore();
   };
 
-  // Blue recycling station on left bridge (x: 180)
   drawBridgeBin(180, bridgeTop - 18, '#0284c7', '#0369a1');
-  // Green general waste station on right bridge (x: 740)
   drawBridgeBin(740, bridgeTop - 18, '#16a34a', '#14532d');
 
-  // 6. Colored-Pencil Base River Water (y: 430..540)
+  // 9. 3D Colored-Pencil River Base Water (y: 430..540)
   const riverHeight = height - riverTop;
   const waterPaper = waterQuality === 'BLACK' ? '#1c1917' : '#e0f7fa';
   const waterPencils =
@@ -1537,41 +1570,42 @@ function getColoredPencilSceneBackdrop(
       ? ['#57534e', '#44403c', '#78716c', '#64748b']
       : ['#1c1917', '#292524', '#44403c', '#0f172a'];
 
-  fillColoredPencilRect(
-    ctx,
-    0,
-    riverTop,
-    width,
-    riverHeight,
-    waterPaper,
-    waterPencils,
-    -24,
-    2.3,
-    0.78,
-    707
-  );
+  fillColoredPencilRect(ctx, 0, riverTop, width, riverHeight, waterPaper, waterPencils, -24, 2.3, 0.78, 707);
+
+  // Deep Canal Baseline Shadow where wall meets water (y: 430..440)
+  const waterBaseShadow = ctx.createLinearGradient(0, riverTop, 0, riverTop + 14);
+  waterBaseShadow.addColorStop(0, 'rgba(10, 15, 25, 0.82)');
+  waterBaseShadow.addColorStop(1, 'rgba(10, 15, 25, 0)');
+  ctx.fillStyle = waterBaseShadow;
+  ctx.fillRect(0, riverTop, width, 14);
 
   sceneBackgroundCache[waterQuality] = canvas;
   return canvas;
 }
 
 /**
- * Draw Bridge Scene & Atmospheric River Water in Hand-Drawn Colored Pencil Style
+ * Draw 3D Stereoscopic Bridge Scene with Atmospheric Volumetric Sunbeams & Perspective Water
  */
 export function drawBridgeScene(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   waterQuality: WaterQuality,
-  timeSec: number
+  timeSec: number,
+  playerX: number = 480
 ) {
   const riverTop = 430;
 
-  // 1. Draw pre-rendered Colored Pencil Backdrop (Sky, Bushes, Square-Tile Wall, Bridge, River Base)
-  const backdrop = getColoredPencilSceneBackdrop(width, height, waterQuality);
-  ctx.drawImage(backdrop, 0, 0);
+  // 3D Parallax offset based on player horizontal position (-12px to +12px)
+  const pOffset = ((playerX - 480) / 480) * 12;
 
-  // 2. Animated Fluffy White Paper Clouds in the Sky (y: 6..42)
+  // 1. Draw pre-rendered 3D Colored Pencil Backdrop with parallax perspective
+  const backdrop = getColoredPencilSceneBackdrop(width, height, waterQuality);
+  ctx.save();
+  ctx.drawImage(backdrop, -pOffset * 0.45, 0);
+  ctx.restore();
+
+  // 2. Animated Fluffy White Paper Clouds in Sky (y: 6..42) with independent 3D parallax drift
   const cloudOffset = (timeSec * 7) % (width + 220);
   const drawPaperCloud = (cx: number, cy: number, scale: number) => {
     ctx.save();
@@ -1597,12 +1631,60 @@ export function drawBridgeScene(
     ctx.restore();
   };
 
-  const c1x = ((width - cloudOffset) % (width + 160)) - 80;
-  const c2x = ((width * 0.62 - cloudOffset * 0.7) % (width + 160)) - 60;
+  const c1x = (((width - cloudOffset) - pOffset * 0.15) % (width + 160)) - 80;
+  const c2x = (((width * 0.62 - cloudOffset * 0.7) - pOffset * 0.15) % (width + 160)) - 60;
   drawPaperCloud(c1x, 16, 1.05);
   drawPaperCloud(c2x, 22, 0.9);
 
-  // 3. Animated Hand-Drawn Colored-Pencil River Waves & White Paper Foam Crests
+  // 3. 3D Atmospheric Volumetric Light Shafts (God Rays / 耶穌光)
+  if (waterQuality !== 'BLACK') {
+    ctx.save();
+    const rayList = [
+      { x1: 170 - pOffset * 0.25, w1: 55, x2: 260, w2: 95, alpha: 0.11 },
+      { x1: 400 - pOffset * 0.25, w1: 75, x2: 520, w2: 125, alpha: 0.14 },
+      { x1: 640 - pOffset * 0.25, w1: 65, x2: 780, w2: 110, alpha: 0.12 },
+    ];
+    for (const ray of rayList) {
+      const grad = ctx.createLinearGradient(0, 135, 0, riverTop + 65);
+      grad.addColorStop(0, `rgba(255, 252, 230, ${ray.alpha * 1.3})`);
+      grad.addColorStop(0.5, `rgba(255, 245, 205, ${ray.alpha * 0.8})`);
+      grad.addColorStop(1, 'rgba(255, 235, 170, 0)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(ray.x1, 135);
+      ctx.lineTo(ray.x1 + ray.w1, 135);
+      ctx.lineTo(ray.x2 + ray.w2, riverTop + 65);
+      ctx.lineTo(ray.x2, riverTop + 65);
+      ctx.closePath();
+      ctx.fill();
+
+      // Soft colored-pencil diagonal light hatch strokes
+      ctx.strokeStyle = `rgba(255, 255, 240, ${ray.alpha * 0.35})`;
+      ctx.lineWidth = 1.0;
+      for (let rx = ray.x1; rx < ray.x1 + ray.w1; rx += 14) {
+        ctx.beginPath();
+        ctx.moveTo(rx, 135);
+        ctx.lineTo(rx + (ray.x2 - ray.x1), riverTop + 65);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  // 4. 3D Wall Reflection into Water Plane
+  ctx.save();
+  const reflectGrad = ctx.createLinearGradient(0, riverTop, 0, riverTop + 55);
+  reflectGrad.addColorStop(0, waterQuality === 'BLUE' ? 'rgba(230, 210, 180, 0.28)' : 'rgba(160, 150, 140, 0.18)');
+  reflectGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = reflectGrad;
+  for (let c = 0; c < 15; c++) {
+    const rx = 75 + c * 54 + (Math.sin(timeSec * 3 + c) * 3) - pOffset * 0.45;
+    ctx.fillRect(rx, riverTop + 2, 48, 45);
+  }
+  ctx.restore();
+
+  // 5. 3D Perspective River Water Plane (Foreshortened ripples from deep back to camera foreground)
   const waveStroke =
     waterQuality === 'BLUE'
       ? '#0369a1'
@@ -1611,77 +1693,140 @@ export function drawBridgeScene(
       : '#090d16';
   const waveHighlight =
     waterQuality === 'BLUE'
-      ? 'rgba(252, 249, 242, 0.88)'
+      ? 'rgba(252, 249, 242, 0.92)'
       : waterQuality === 'GREY'
       ? 'rgba(231, 229, 228, 0.65)'
       : 'rgba(120, 113, 108, 0.45)';
 
   ctx.save();
-  // Continuous wavy white foam crest along the top of the river (y = 430)
+
+  // Top Continuous Wavy Foam Crest (y = 430)
   ctx.strokeStyle = waveHighlight;
-  ctx.lineWidth = 3.2;
+  ctx.lineWidth = 3.4;
   ctx.lineCap = 'round';
   ctx.beginPath();
   for (let x = 0; x <= width; x += 12) {
     const wy =
       riverTop +
-      Math.sin((x + timeSec * 42) * 0.045) * 2.8 +
+      Math.sin((x + timeSec * 42) * 0.045) * 2.6 +
       Math.cos((x - timeSec * 25) * 0.09) * 1.2;
     if (x === 0) ctx.moveTo(x, wy);
     else ctx.lineTo(x, wy);
   }
   ctx.stroke();
 
-  // Dark teal colored-pencil contour line right below the foam crest
+  // Dark contour shadow along foam crest
   ctx.strokeStyle = waveStroke;
   ctx.lineWidth = 1.8;
-  ctx.globalAlpha = 0.75;
+  ctx.globalAlpha = 0.8;
   ctx.beginPath();
   for (let x = 0; x <= width; x += 12) {
     const wy =
       riverTop +
-      2.5 +
-      Math.sin((x + timeSec * 42) * 0.045) * 2.8 +
+      2.6 +
+      Math.sin((x + timeSec * 42) * 0.045) * 2.6 +
       Math.cos((x - timeSec * 25) * 0.09) * 1.2;
     if (x === 0) ctx.moveTo(x, wy);
     else ctx.lineTo(x, wy);
   }
   ctx.stroke();
 
-  // Animated wavy colored-pencil ripple strokes inside the river body
-  const rippleRows = [riverTop + 20, riverTop + 44, riverTop + 70, riverTop + 94];
-  for (let rIdx = 0; rIdx < rippleRows.length; rIdx++) {
-    const baseY = rippleRows[rIdx];
-    const dir = rIdx % 2 === 0 ? 1 : -1;
-    const shift = (timeSec * 28 * dir) % 90;
+  // 3D Perspective Wave Layers (Foreshortened from distance to foreground)
+  // Layer 1: Distance (y = 445) - tight fine ripples
+  for (let x = -60 + ((timeSec * 22) % 60); x < width + 60; x += 60) {
+    ctx.strokeStyle = waveHighlight;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    for (let dx = 0; dx <= 32; dx += 6) {
+      const px = x + dx;
+      const py = 445 + Math.sin(px * 0.12) * 1.5;
+      if (dx === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
 
-    for (let x = -90 + shift; x < width + 90; x += 90) {
-      // White pencil highlight ripple
+  // Layer 2: Mid-ground (y = 472) - medium ripples
+  for (let x = -80 + ((timeSec * -30) % 80); x < width + 80; x += 80) {
+    ctx.strokeStyle = waveHighlight;
+    ctx.lineWidth = 2.2;
+    ctx.globalAlpha = 0.72;
+    ctx.beginPath();
+    for (let dx = 0; dx <= 46; dx += 8) {
+      const px = x + dx;
+      const py = 472 + Math.sin(px * 0.07) * 2.8;
+      if (dx === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = waveStroke;
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    for (let dx = 4; dx <= 50; dx += 8) {
+      const px = x + dx;
+      const py = 474.5 + Math.sin(px * 0.07) * 2.8;
+      if (dx === 4) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Layer 3: Foreground (y = 505..535) - deep rolling 3D waves closest to camera
+  const fgRows = [505, 528];
+  for (let rIdx = 0; rIdx < fgRows.length; rIdx++) {
+    const baseY = fgRows[rIdx];
+    const dir = rIdx % 2 === 0 ? 1 : -1;
+    const shift = (timeSec * 36 * dir) % 110;
+
+    for (let x = -110 + shift; x < width + 110; x += 110) {
+      // Big white foam crest
       ctx.strokeStyle = waveHighlight;
-      ctx.lineWidth = 2.0;
-      ctx.globalAlpha = 0.65;
+      ctx.lineWidth = 3.2;
+      ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      for (let dx = 0; dx <= 48; dx += 8) {
+      for (let dx = 0; dx <= 64; dx += 8) {
         const px = x + dx;
-        const py = baseY + Math.sin((px + rIdx * 30) * 0.08) * 2.5;
+        const py = baseY + Math.sin((px + rIdx * 45) * 0.05) * 4.2;
         if (dx === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
 
-      // Dark teal pencil shadow ripple
+      // Deep teal rolling wave body
       ctx.strokeStyle = waveStroke;
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 2.2;
+      ctx.globalAlpha = 0.7;
       ctx.beginPath();
-      for (let dx = 6; dx <= 54; dx += 8) {
+      for (let dx = 6; dx <= 70; dx += 8) {
         const px = x + dx;
-        const py = baseY + 2.5 + Math.sin((px + rIdx * 30) * 0.08) * 2.5;
+        const py = baseY + 3.8 + Math.sin((px + rIdx * 45) * 0.05) * 4.2;
         if (dx === 6) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.stroke();
     }
   }
+
+  // Water Sparkles (Caustics) dancing under volumetric sunrays
+  if (waterQuality === 'BLUE') {
+    const sparkleSpots = [
+      { x: 230, y: 442 }, { x: 285, y: 468 }, { x: 470, y: 450 },
+      { x: 540, y: 478 }, { x: 720, y: 445 }, { x: 775, y: 485 },
+    ];
+    for (let i = 0; i < sparkleSpots.length; i++) {
+      const sp = sparkleSpots[i];
+      const sparkAlpha = Math.max(0, Math.sin(timeSec * 5 + i * 2.2));
+      if (sparkAlpha > 0.1) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${sparkAlpha * 0.9})`;
+        ctx.beginPath();
+        ctx.arc(sp.x + Math.sin(timeSec * 2 + i) * 8, sp.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
   ctx.restore();
 }

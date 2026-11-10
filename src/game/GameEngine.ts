@@ -722,8 +722,8 @@ export class GameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.V_WIDTH, this.V_HEIGHT);
 
-    // 1. Draw Bridge, Clouds, River Water
-    drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime);
+    // 1. Draw 3D Stereoscopic Bridge, Clouds, River Water with Parallax
+    drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime, this.playerX);
 
     // 2. Draw Pedestrians on bridge
     for (const p of this.pedestrians) {
