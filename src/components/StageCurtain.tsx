@@ -178,9 +178,17 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
 
       {/* =========================================================================
           TOP THEATRICAL VALANCE (舞台頂部橫楣拱幔)
-          Gracefully frames the top of the stage in all scenes!
+          Retracts upward when the curtain opens so it never blocks the game!
           ========================================================================= */}
-      <div className="absolute top-0 inset-x-0 h-9 sm:h-11 z-40 pointer-events-none shadow-md overflow-hidden flex">
+      <div
+        style={{
+          transform: isClosed ? 'translate3d(0, 0, 0)' : 'translate3d(0, -105%, 0)',
+          transition: isClosed
+            ? 'transform 450ms cubic-bezier(0.25, 1, 0.5, 1)'
+            : 'transform 550ms cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        className="absolute top-0 inset-x-0 h-9 sm:h-11 z-40 pointer-events-none shadow-md overflow-hidden flex will-change-transform"
+      >
         {/* Scalloped Arch Drapes (5 arches across width) */}
         {[0, 1, 2, 3, 4].map((idx) => (
           <div key={idx} className="flex-1 h-full relative">

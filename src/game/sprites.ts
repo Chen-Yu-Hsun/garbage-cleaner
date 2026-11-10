@@ -1388,19 +1388,19 @@ function getColoredPencilSceneBackdrop(
     drawSketchyLine(ctx, wallRight, py, width, py, stoneOutline, 1.4, rand);
   }
 
-  // 5. Wooden Level Sign "第一關 傷心湯" on Left Pier (matches mockup)
+  // 5. Wooden Scenic River Sign "傷心湯" on Left Pier (clean, no stage subtitle)
   ctx.save();
   // Hanging cords
-  drawSketchyLine(ctx, 18, bridgeTop + 4, 18, bridgeTop + 22, '#3b220e', 2, rand);
-  drawSketchyLine(ctx, 54, bridgeTop + 4, 54, bridgeTop + 22, '#3b220e', 2, rand);
+  drawSketchyLine(ctx, 20, bridgeTop + 4, 20, bridgeTop + 20, '#3b220e', 2, rand);
+  drawSketchyLine(ctx, 52, bridgeTop + 4, 52, bridgeTop + 20, '#3b220e', 2, rand);
 
-  // Sign board
+  // Sign board - clean scenic plaque without redundant "第一關" subtitle
   fillColoredPencilRect(
     ctx,
-    4,
-    bridgeTop + 20,
-    64,
-    48,
+    6,
+    bridgeTop + 18,
+    60,
+    36,
     '#ebd3b0',
     ['#8c5828', '#73441b', '#a66d38'],
     -30,
@@ -1409,19 +1409,16 @@ function getColoredPencilSceneBackdrop(
     606
   );
   ctx.strokeStyle = '#3b220e';
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(4, bridgeTop + 20, 64, 48);
-  ctx.strokeStyle = 'rgba(255, 235, 200, 0.35)';
+  ctx.lineWidth = 2.2;
+  ctx.strokeRect(6, bridgeTop + 18, 60, 36);
+  ctx.strokeStyle = 'rgba(255, 235, 200, 0.4)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(7, bridgeTop + 23, 58, 42);
+  ctx.strokeRect(8, bridgeTop + 20, 56, 32);
 
   ctx.fillStyle = '#fffbeb';
-  ctx.font = 'bold 12px "DotGothic16", sans-serif';
+  ctx.font = 'bold 16px "DotGothic16", sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('第一關', 36, bridgeTop + 39);
-  ctx.fillStyle = '#fde68a';
-  ctx.font = 'bold 14px "DotGothic16", sans-serif';
-  ctx.fillText('傷心湯', 36, bridgeTop + 59);
+  ctx.fillText('傷心湯', 36, bridgeTop + 42);
   ctx.restore();
 
   // 6. Colored-Pencil Base River Water (y: 430..540)

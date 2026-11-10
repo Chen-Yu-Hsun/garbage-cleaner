@@ -55,14 +55,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black font-pixel-tc text-[#2b221a] flex items-center gap-2">
-                <span>河川守護者 · 雲端排行榜</span>
+                <span>雲端排行榜</span>
                 <span className="text-[10px] font-pixel text-white bg-[#4d8b55] px-2 py-0.5 rounded border border-[#264229]">
                   TOP 50
                 </span>
               </h2>
-              <p className="text-xs font-pixel-tc text-[#5c4a38] font-bold">
-                依成功攔截垃圾總數排序 · 同分依存活時間決勝
-              </p>
             </div>
           </div>
 
@@ -201,20 +198,15 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t-2 border-[#cbbba0] bg-[#f3ead8] flex items-center justify-between text-xs font-pixel-tc text-[#5c4a38] font-bold">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-[#15803d]" />
-            <span>雲端伺服器防作弊驗證已啟用</span>
-          </div>
-
+        <div className="p-3.5 border-t-2 border-[#cbbba0] bg-[#f3ead8] flex items-center justify-end">
           <button
             onClick={() => {
               sound.playClick();
               onClose();
             }}
-            className="px-4 py-1.5 pencil-btn-amber font-bold font-pixel-tc cursor-pointer"
+            className="px-5 py-2 pencil-btn-amber font-bold font-pixel-tc cursor-pointer text-sm"
           >
-            返回遊戲
+            返回
           </button>
         </div>
       </div>
