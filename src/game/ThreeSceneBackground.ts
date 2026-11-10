@@ -50,6 +50,7 @@ export class ThreeSceneBackground {
   private canvas: HTMLCanvasElement;
   private renderer: THREE.WebGLRenderer | null = null;
   private scene: THREE.Scene;
+  private trashForegroundScene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
   public isAvailable: boolean = false;
 
@@ -70,6 +71,8 @@ export class ThreeSceneBackground {
   private mossMaterials: THREE.MeshStandardMaterial[] = [];
   private sunLight!: THREE.DirectionalLight;
   private hemiLight!: THREE.HemisphereLight;
+  private fgSunLight!: THREE.DirectionalLight;
+  private fgHemiLight!: THREE.HemisphereLight;
   private signMesh!: THREE.Mesh;
 
   // 3D Crowd (人群) & 3D Falling/Floating Items (掉落物) Containers
@@ -113,6 +116,7 @@ export class ThreeSceneBackground {
     }
 
     this.scene = new THREE.Scene();
+    this.trashForegroundScene = new THREE.Scene();
 
     // Exact 1:1 coordinate calibration at Z = 0:
     // Screen (960x540) -> World (19.2 x 10.8) at Z = 0, Camera at Z = 18
@@ -391,6 +395,19 @@ export class ThreeSceneBackground {
     const bounceLight = new THREE.DirectionalLight(0x7dd3fc, 0.45);
     bounceLight.position.set(6, -6, 8);
     this.scene.add(bounceLight);
+
+    // Matching lights for the dedicated foreground 3D trash/raindrop layer (rendered above bridge piers)
+    this.fgHemiLight = new THREE.HemisphereLight(0xffffff, 0x6b533b, 1.15);
+    this.fgHemiLight.position.set(0, 12, 6);
+    this.trashForegroundScene.add(this.fgHemiLight);
+
+    this.fgSunLight = new THREE.DirectionalLight(0xfff7e6, 1.55);
+    this.fgSunLight.position.set(-8, 11, 12);
+    this.trashForegroundScene.add(this.fgSunLight);
+
+    const fgBounceLight = new THREE.DirectionalLight(0x7dd3fc, 0.45);
+    fgBounceLight.position.set(6, -6, 8);
+    this.trashForegroundScene.add(fgBounceLight);
   }
 
   private buildSkyAndClouds() {
@@ -667,36 +684,37 @@ export class ThreeSceneBackground {
         archRootGroup.add(cMesh);
       }
 
-      const capGeo = new THREE.BoxGeometry(pierW + 0.22, 0.22, 1.18);
+      const capGeo = new THREE.BoxGeometry(pierW + 0.22, 0.22, 1.12);
       const capMesh = new THREE.Mesh(capGeo, mainStoneMat);
-      capMesh.position.set(px, ySpring - 0.02, 0.28);
+      capMesh.position.set(px, ySpring + 0.01, 0.26);
       archRootGroup.add(capMesh);
 
-      const neckGeo = new THREE.BoxGeometry(pierW + 0.12, 0.10, 1.06);
+      const neckGeo = new THREE.BoxGeometry(pierW + 0.12, 0.09, 1.02);
       const neckMesh = new THREE.Mesh(neckGeo, darkArchVaultMat);
-      neckMesh.position.set(px, ySpring - 0.16, 0.24);
+      neckMesh.position.set(px, ySpring - 0.155, 0.24);
       archRootGroup.add(neckMesh);
 
-      const cutH = 0.65;
-      const cutGeo = new THREE.CylinderGeometry(pierW * 0.56, pierW * 0.68, cutH, 4);
+      const cutH = 0.56;
+      const cutGeo = new THREE.BoxGeometry(pierW * 0.76, cutH, 0.34);
       const cutMesh = new THREE.Mesh(cutGeo, mainStoneMat);
-      cutMesh.position.set(px, riverTopY + 0.16, 0.45);
+      cutMesh.position.set(px, shaftBotY + cutH / 2, 0.875);
       archRootGroup.add(cutMesh);
 
-      const capPyrGeo = new THREE.ConeGeometry(pierW * 0.56, 0.28, 4);
+      const capPyrGeo = new THREE.ConeGeometry(pierW * 0.48, 0.24, 4);
+      capPyrGeo.rotateY(Math.PI / 4);
       const capPyrMesh = new THREE.Mesh(capPyrGeo, pierStoneMat);
-      capPyrMesh.position.set(px, riverTopY + 0.16 + cutH / 2 + 0.14, 0.45);
+      capPyrMesh.position.set(px, shaftBotY + cutH + 0.125, 0.875);
       archRootGroup.add(capPyrMesh);
 
       const mossCluster = new THREE.Group();
       for (let m = 0; m < 4; m++) {
-        const mGeo = new THREE.SphereGeometry(0.14 - m * 0.02, 8, 8);
-        mGeo.scale(0.85, 1.6, 0.6);
+        const mGeo = new THREE.SphereGeometry(0.11 - m * 0.015, 8, 8);
+        mGeo.scale(0.85, 1.35, 0.45);
         const mMesh = new THREE.Mesh(mGeo, mossMat);
         mMesh.position.set(
-          px + (m % 2 === 0 ? -0.36 : 0.36),
-          wallTopY - 0.22 - m * 0.16,
-          0.32
+          px + (m % 2 === 0 ? -0.32 : 0.32),
+          shaftTopY - 0.24 - m * 0.22,
+          0.74
         );
         mossCluster.add(mMesh);
       }
@@ -785,7 +803,7 @@ export class ThreeSceneBackground {
     chainR.position.set((46 - 480) / 50, (270 - 102) / 50, 1.38);
     deckRootGroup.add(chainR);
 
-    const create3DBin = (xPx: number, bodyHex: number, lidHex: number) => {
+    const create3DBin = (worldX: number, bodyHex: number, lidHex: number) => {
       const group = new THREE.Group();
       const bodyGeo = new THREE.BoxGeometry(0.32, 0.48, 0.28);
       const bodyMat = new THREE.MeshStandardMaterial({ color: bodyHex, roughness: 0.5 });
@@ -795,16 +813,16 @@ export class ThreeSceneBackground {
       const lidGeo = new THREE.BoxGeometry(0.38, 0.10, 0.32);
       const lidMat = new THREE.MeshStandardMaterial({ color: lidHex, roughness: 0.4 });
       const lid = new THREE.Mesh(lidGeo, lidMat);
-      lid.position.y = 0.28;
+      lid.position.y = 0.295; // clean gap above body top (+0.24)
       group.add(lid);
 
-      // Place bins along the rear parapet wall so pedestrians walk in front without clipping
-      group.position.set((xPx + 8 - 480) / 50, 3.62, -0.10);
+      // Place bins directly above the bridge pier columns on top of the rear coping ledge (Y = 3.65 + 0.245)
+      group.position.set(worldX, 3.895, -0.22);
       deckRootGroup.add(group);
     };
 
-    create3DBin(180, 0x0284c7, 0x0369a1);
-    create3DBin(740, 0x16a34a, 0x14532d);
+    create3DBin(-2.54, 0x0284c7, 0x0369a1);
+    create3DBin(2.54, 0x16a34a, 0x14532d);
 
     this.applyPencilCoatingToGroup(deckRootGroup, true, 26, 0.76);
     this.scene.add(deckRootGroup);
@@ -1453,62 +1471,80 @@ export class ThreeSceneBackground {
         break;
       }
 
-      // T02: 3D PET Bottle (寶特瓶 - 不透明色鉛筆質感與獨立高度分段徹底消除穿模)
+      // T02: 3D PET Bottle (寶特瓶 - 三段式獨立圓柱拼接與色鉛筆塗層，徹底消除內外同心圓柱穿模)
       case 'T02': {
         const bottleMat = new THREE.MeshStandardMaterial({
           color: 0x7dd3fc,
           roughness: 0.28,
           metalness: 0.08,
         });
-        const bodyGeo = new THREE.CylinderGeometry(0.155, 0.155, 0.36, 16);
-        const body = new THREE.Mesh(bodyGeo, bottleMat);
-        body.position.y = -0.08; // spans -0.26 .. +0.10
-        group.add(body);
-
-        const neckGeo = new THREE.CylinderGeometry(0.062, 0.155, 0.16, 16);
-        const neck = new THREE.Mesh(neckGeo, bottleMat);
-        neck.position.y = 0.185; // spans +0.105 .. +0.265
-        group.add(neck);
-
-        const labelGeo = new THREE.CylinderGeometry(0.164, 0.164, 0.14, 16);
         const labelMat = new THREE.MeshStandardMaterial({
           color: 0x0284c7,
           roughness: 0.45,
-          polygonOffset: true,
-          polygonOffsetFactor: -1,
         });
+
+        // Lower bottle segment (-0.26 .. -0.13)
+        const botGeo = new THREE.CylinderGeometry(0.155, 0.155, 0.13, 16);
+        const bot = new THREE.Mesh(botGeo, bottleMat);
+        bot.position.y = -0.195;
+        group.add(bot);
+
+        // Middle label segment (-0.125 .. +0.015)
+        const labelGeo = new THREE.CylinderGeometry(0.158, 0.158, 0.14, 16);
         const label = new THREE.Mesh(labelGeo, labelMat);
-        label.position.y = -0.06;
+        label.position.y = -0.055;
         group.add(label);
 
+        // Upper bottle body segment (+0.02 .. +0.10)
+        const topBodyGeo = new THREE.CylinderGeometry(0.155, 0.155, 0.08, 16);
+        const topBody = new THREE.Mesh(topBodyGeo, bottleMat);
+        topBody.position.y = 0.06;
+        group.add(topBody);
+
+        // Tapered neck (+0.105 .. +0.265)
+        const neckGeo = new THREE.CylinderGeometry(0.062, 0.155, 0.16, 16);
+        const neck = new THREE.Mesh(neckGeo, bottleMat);
+        neck.position.y = 0.185;
+        group.add(neck);
+
+        // Cap (+0.27 .. +0.35)
         const capGeo = new THREE.CylinderGeometry(0.068, 0.068, 0.08, 12);
         const capMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.35 });
         const cap = new THREE.Mesh(capGeo, capMat);
-        cap.position.y = 0.31; // spans +0.27 .. +0.35
+        cap.position.y = 0.31;
         group.add(cap);
         break;
       }
 
-      // T03: 3D Beverage Can (飲料罐 - 無重疊金屬邊環與標籤防穿模)
+      // T03: 3D Beverage Can (飲料罐 - 三段式無重疊圓柱與金屬邊環防穿模)
       case 'T03': {
-        const canGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.40, 18);
         const canMat = new THREE.MeshStandardMaterial({
           color: 0xdc2626,
           metalness: 0.45,
           roughness: 0.35,
         });
-        const can = new THREE.Mesh(canGeo, canMat);
-        group.add(can); // spans -0.20 .. +0.20
-
-        const stripeGeo = new THREE.CylinderGeometry(0.173, 0.173, 0.14, 18);
         const stripeMat = new THREE.MeshStandardMaterial({
           color: 0xfef3c7,
           roughness: 0.45,
-          polygonOffset: true,
-          polygonOffsetFactor: -1,
         });
+
+        // Lower red can segment (-0.20 .. -0.075)
+        const canBotGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.125, 18);
+        const canBot = new THREE.Mesh(canBotGeo, canMat);
+        canBot.position.y = -0.1375;
+        group.add(canBot);
+
+        // Middle cream stripe segment (-0.07 .. +0.07)
+        const stripeGeo = new THREE.CylinderGeometry(0.167, 0.167, 0.14, 18);
         const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.position.y = 0;
         group.add(stripe);
+
+        // Upper red can segment (+0.075 .. +0.20)
+        const canTopGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.125, 18);
+        const canTop = new THREE.Mesh(canTopGeo, canMat);
+        canTop.position.y = 0.1375;
+        group.add(canTop);
 
         const rimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.75, roughness: 0.25 });
         const rimTopGeo = new THREE.CylinderGeometry(0.15, 0.165, 0.04, 18);
@@ -1655,13 +1691,11 @@ export class ThreeSceneBackground {
       if (!meshGroup) {
         meshGroup = this.createTrash3DGroup(t.type);
         this.trashMeshes.set(t.id, meshGroup);
-        this.scene.add(meshGroup);
+        this.trashForegroundScene.add(meshGroup);
       }
 
-      // Place falling trash on foreground plane (Z = 2.40..2.60) strictly in front of
-      // all bridge piers, arches, corbels, and tilted water plane to prevent any clipping,
-      // while perspective-compensating (wx, wy, scale) for 1:1 hitbox alignment!
-      const zFg = 2.40 + (i % 5) * 0.045;
+      // Rendered in trashForegroundScene (layer strictly above bridge piers & water after clearDepth)
+      const zFg = 0.20 + (i % 7) * 0.08;
       const persp = (18 - zFg) / 18;
       const wx = this.camera.position.x * (1 - persp) + ((t.x - 480) / 50) * persp;
       const wy = ((270 - t.y) / 50) * persp;
@@ -1677,7 +1711,7 @@ export class ThreeSceneBackground {
 
     for (const [id, meshGroup] of this.trashMeshes.entries()) {
       if (!activeIds.has(id)) {
-        this.scene.remove(meshGroup);
+        this.trashForegroundScene.remove(meshGroup);
         this.trashMeshes.delete(id);
       }
     }
@@ -1695,10 +1729,10 @@ export class ThreeSceneBackground {
       if (!meshGroup) {
         meshGroup = this.createRaindrop3DGroup();
         this.raindropMeshes.set(r.id, meshGroup);
-        this.scene.add(meshGroup);
+        this.trashForegroundScene.add(meshGroup);
       }
 
-      const zFg = 2.65 + (i % 4) * 0.04;
+      const zFg = 0.85 + (i % 5) * 0.08;
       const persp = (18 - zFg) / 18;
       const wx = this.camera.position.x * (1 - persp) + ((r.x - 480) / 50) * persp;
       const wy = ((270 - r.y) / 50) * persp;
@@ -1711,7 +1745,7 @@ export class ThreeSceneBackground {
 
     for (const [id, meshGroup] of this.raindropMeshes.entries()) {
       if (!activeIds.has(id)) {
-        this.scene.remove(meshGroup);
+        this.trashForegroundScene.remove(meshGroup);
         this.raindropMeshes.delete(id);
       }
     }
@@ -1728,13 +1762,12 @@ export class ThreeSceneBackground {
       if (!meshGroup) {
         meshGroup = this.createTrash3DGroup(vt.type);
         this.riverTrashMeshes.set(vt.id, meshGroup);
-        this.scene.add(meshGroup);
+        this.trashForegroundScene.add(meshGroup);
       }
 
-      // Place floating river trash at Z = 3.45..3.65 above the tilted 3D water plane
-      // with exact perspective compensation so waves never clip over floating items
+      // Rendered in trashForegroundScene (layer strictly above river water & bridge piers)
       const bob = Math.sin(timeSec * vt.bobSpeed + vt.bobOffset) * 3.5;
-      const zFloat = 3.45 + (i % 5) * 0.045;
+      const zFloat = -0.35 + (i % 7) * 0.06;
       const persp = (18 - zFloat) / 18;
       const wx = this.camera.position.x * (1 - persp) + ((vt.x - 480) / 50) * persp;
       const wy = ((270 - (vt.y + bob)) / 50) * persp;
@@ -1750,7 +1783,7 @@ export class ThreeSceneBackground {
 
     for (const [id, meshGroup] of this.riverTrashMeshes.entries()) {
       if (!activeIds.has(id)) {
-        this.scene.remove(meshGroup);
+        this.trashForegroundScene.remove(meshGroup);
         this.riverTrashMeshes.delete(id);
       }
     }
@@ -1895,6 +1928,9 @@ export class ThreeSceneBackground {
       this.sunLight.color.setHex(0xfff7e6);
       this.sunLight.intensity = 1.55;
       this.hemiLight.intensity = 1.15;
+      this.fgSunLight.color.setHex(0xfff7e6);
+      this.fgSunLight.intensity = 1.55;
+      this.fgHemiLight.intensity = 1.15;
 
       this.foliageMaterials[0]?.color.setHex(0x4ade80);
       this.foliageMaterials[1]?.color.setHex(0x22c55e);
@@ -1916,6 +1952,9 @@ export class ThreeSceneBackground {
       this.sunLight.color.setHex(0xe2e8f0);
       this.sunLight.intensity = 1.1;
       this.hemiLight.intensity = 0.9;
+      this.fgSunLight.color.setHex(0xe2e8f0);
+      this.fgSunLight.intensity = 1.1;
+      this.fgHemiLight.intensity = 0.9;
 
       this.foliageMaterials[0]?.color.setHex(0x84a98c);
       this.foliageMaterials[1]?.color.setHex(0x6b9080);
@@ -1937,6 +1976,9 @@ export class ThreeSceneBackground {
       this.sunLight.color.setHex(0x78716c);
       this.sunLight.intensity = 0.65;
       this.hemiLight.intensity = 0.55;
+      this.fgSunLight.color.setHex(0x78716c);
+      this.fgSunLight.intensity = 0.65;
+      this.fgHemiLight.intensity = 0.55;
 
       this.foliageMaterials[0]?.color.setHex(0x3f3f46);
       this.foliageMaterials[1]?.color.setHex(0x27272a);
@@ -2015,11 +2057,18 @@ export class ThreeSceneBackground {
   }
 
   /**
-   * Render the 3D scene to internal WebGL canvas
+   * Render the 3D scene to internal WebGL canvas:
+   * Pass 1: Background 3D world, bridge deck, pedestrians, bridge pier pillars & river water
+   * Pass 2: Clear depth buffer and render 3D trash/raindrop layer strictly on top of bridge piers to prevent clipping
    */
   public render() {
     if (!this.isAvailable || !this.renderer) return;
+    this.renderer.autoClear = true;
     this.renderer.render(this.scene, this.camera);
+    this.renderer.autoClear = false;
+    this.renderer.clearDepth();
+    this.renderer.render(this.trashForegroundScene, this.camera);
+    this.renderer.autoClear = true;
   }
 
   public getCanvas(): HTMLCanvasElement {

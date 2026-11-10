@@ -45,8 +45,9 @@ export class GameEngine {
 
   // Player State
   public playerX = 480;
-  public readonly BASE_PLAYER_SPEED = 380 * 0.7; // 266 px/s (overall player speed multiplied by 0.7)
-  public playerSpeed = 380 * 0.7; // px/s (scales proportionally with trash fall speed)
+  public readonly BASE_PLAYER_SPEED = 380 * 0.7 * 0.7; // 186.2 px/s (reduced again by * 0.7)
+  public playerSpeed = 380 * 0.7 * 0.7; // px/s (scales proportionally with trash fall speed)
+  public readonly TRASH_SPEED_BOOST = 1.3; // Overall trash fall speed boosted to 1.3x
   public moveLeft = false;
   public moveRight = false;
   public facingRight = false; // Mirror sprite horizontally when moving right
@@ -118,17 +119,17 @@ export class GameEngine {
   // Calculate uncapped staged speed multiplier (increases every 30s with no upper limit)
   public getTrashSpeedMultiplier(): number {
     const stage = Math.floor(this.effectiveGameTime / 30);
-    if (stage <= 0) return 1.0;        // 0-30s: 5.0s fall duration (1.00x)
-    if (stage === 1) return 5.0 / 4.0; // 30-60s: 4.0s fall duration (1.25x)
-    if (stage === 2) return 5.0 / 3.0; // 60-90s: 3.0s fall duration (1.67x)
-    // 90s+ (stage >= 3): 2.0s fall duration (2.5x) at 90s, +1.0x every 30s stage thereafter with NO cap!
+    if (stage <= 0) return 1.0;        // 0-30s: 1.00x stage multiplier
+    if (stage === 1) return 1.3;       // 30-60s: 1.30x stage multiplier
+    if (stage === 2) return 5.0 / 3.0; // 60-90s: 1.67x stage multiplier
+    // 90s+ (stage >= 3): 2.5x at 90s, +1.0x every 30s stage thereafter with NO cap!
     return 2.5 + (stage - 3) * 1.0;
   }
 
-  // Calculate current trash fall speed (uncapped staged acceleration)
+  // Calculate current trash fall speed (boosted 1.3x + uncapped staged acceleration)
   private getTrashFallSpeed(): number {
     const fallDistance = this.RIVER_Y - this.BRIDGE_DROP_Y;
-    const baseFallSpeed = fallDistance / 5.0;
+    const baseFallSpeed = (fallDistance / 5.0) * this.TRASH_SPEED_BOOST;
     return baseFallSpeed * this.getTrashSpeedMultiplier();
   }
 
