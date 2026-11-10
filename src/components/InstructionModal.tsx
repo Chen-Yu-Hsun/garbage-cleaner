@@ -67,31 +67,41 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
         handleNext();
+      } else if (e.key === 'Escape') {
+        onComplete();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleNext]);
+  }, [handleNext, onComplete]);
 
   const current = instructions[stepIndex];
 
   return (
     <div
       onClick={handleNext}
-      className="relative w-full h-full min-h-[460px] sm:min-h-[500px] flex flex-col justify-between p-4 sm:p-6 bg-gradient-to-b from-[#1b2e28] via-[#13221e] to-[#0c1614] text-slate-100 cursor-pointer select-none overflow-y-auto sm:overflow-hidden"
+      className="relative w-full h-full min-h-[460px] sm:min-h-[500px] flex flex-col justify-between p-4 sm:p-6 pencil-paper-bg text-[#2c2520] cursor-pointer select-none overflow-y-auto sm:overflow-hidden"
     >
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#34d399_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+      {/* Top Colored-Pencil Sky Border Accent */}
+      <div
+        className="absolute top-0 inset-x-0 h-20 pointer-events-none opacity-40"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(-33deg, rgba(59, 130, 246, 0.35) 0px, rgba(59, 130, 246, 0.35) 1.5px, transparent 1.5px, transparent 5px)',
+          maskImage: 'linear-gradient(to bottom, black 35%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 35%, transparent 100%)',
+        }}
+      />
 
       {/* Top Header */}
       <div className="flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          <span className="font-pixel text-xs text-[#fbbf24]">TUTORIAL</span>
-          <span className="text-[#5a786c]">·</span>
-          <span className="text-xs font-pixel-tc text-[#9bb5a8]">操作說明</span>
+        <div className="pencil-hud-pill px-3 py-1.5 flex items-center gap-2">
+          <span className="font-pixel text-xs text-[#facc15]">TUTORIAL</span>
+          <span className="text-[#a8a29e]">·</span>
+          <span className="text-xs font-pixel-tc text-[#f5f2eb]">手繪操作繪本</span>
         </div>
 
         <button
@@ -100,67 +110,74 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
             sound.playClick();
             onComplete();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#182a24] hover:bg-[#223931] border border-[#2d453b] text-xs font-pixel-tc text-[#c9ded5] hover:text-white transition-colors cursor-pointer shadow-sm"
+          className="pencil-hud-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-pixel-tc hover:brightness-110 transition-all cursor-pointer"
         >
           <span>跳過說明</span>
-          <SkipForward className="w-3.5 h-3.5 text-[#fbbf24]" />
+          <SkipForward className="w-3.5 h-3.5 text-[#facc15]" />
         </button>
       </div>
 
-      {/* Main Dialogue Card */}
-      <div className="z-10 max-w-xl mx-auto w-full my-auto space-y-6">
+      {/* Main Sketchbook Dialogue Card */}
+      <div className="z-10 max-w-xl mx-auto w-full my-auto space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-[#20332c] border-2 border-[#10b981]/60 flex items-center justify-center text-2xl shadow-inner shadow-black/40 overflow-hidden">
+          <div className="w-14 h-14 pencil-card bg-[#fffdf8] flex items-center justify-center text-2xl overflow-hidden shrink-0">
             {current.step === '02' ? (
-              <MossMonsterSprite size={36} />
+              <MossMonsterSprite size={42} />
             ) : current.step === '05' ? (
-              <WaterSpiritSprite size={36} />
+              <WaterSpiritSprite size={42} />
             ) : (
               current.icon
             )}
           </div>
           <div>
-            <div className="text-xs font-pixel text-[#fbbf24]">STEP {current.step} / 06</div>
-            <h3 className="text-sm font-pixel-tc text-[#e2ece7] font-semibold">{current.kicker}</h3>
+            <div className="text-xs font-pixel text-[#b45309] font-bold">
+              STEP {current.step} / 06
+            </div>
+            <h2 className="text-lg md:text-xl font-bold font-pixel-tc text-[#2b221a]">
+              {current.kicker}
+            </h2>
           </div>
         </div>
 
-        {/* Narrative Box with retro pixel border */}
-        <div className="p-6 rounded-2xl bg-[#162722]/95 border-2 border-[#2b4238] shadow-2xl relative">
-          <p className="text-lg md:text-xl font-bold font-pixel-tc text-white leading-relaxed tracking-wide">
+        {/* Main Dialogue Box */}
+        <div className="p-6 pencil-card space-y-4">
+          <p className="text-base md:text-lg font-pixel-tc leading-relaxed text-[#2c2520] font-bold min-h-[3.5rem]">
             {current.text}
           </p>
 
-          <div className="mt-4 pt-4 border-t border-[#263c33] flex items-start gap-2 text-xs font-pixel-tc text-[#9bb5a8]">
-            <span className="text-[#fbbf24] shrink-0 font-bold">提示：</span>
+          <div className="pt-3 border-t-2 border-dashed border-[#cbbba0] flex items-start gap-2 text-xs font-pixel-tc text-[#5c4a38]">
+            <Sparkles className="w-4 h-4 text-[#d97706] shrink-0 mt-0.5" />
             <span>{current.tip}</span>
           </div>
         </div>
+
+        {/* Step Progress Dots */}
+        <div className="flex items-center justify-center gap-2.5">
+          {instructions.map((item, idx) => (
+            <div
+              key={item.step}
+              className={`h-2.5 rounded-full border border-[#3d3228] transition-all duration-300 ${
+                idx === stepIndex
+                  ? 'w-8 bg-[#4d8b55]'
+                  : idx < stepIndex
+                  ? 'w-2.5 bg-[#84a955]'
+                  : 'w-2.5 bg-[#e5d7c1]'
+              }`}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Bottom Footer Action Guidance */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 z-10 pt-4 border-t border-[#1e332a]">
-        <div className="flex items-center gap-2 text-xs font-pixel-tc text-[#8fa89b]">
-          <Keyboard className="w-4 h-4 text-[#34d399]" />
-          <span>點擊螢幕或按【Enter】繼續</span>
+      {/* Bottom Prompt */}
+      <div className="flex items-center justify-between z-10 pt-2 border-t-2 border-[#d8cbb8]">
+        <div className="flex items-center gap-2 text-xs font-pixel-tc text-[#5c4a38] font-bold">
+          <Keyboard className="w-4 h-4 text-[#8c5828]" />
+          <span>按 Enter、空白鍵 或 點擊畫面繼續</span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
-            {instructions.map((_, idx) => (
-              <div
-                key={idx}
-                className={`w-2.5 h-2.5 rounded-full ${
-                  idx === stepIndex ? 'bg-[#fbbf24] ring-2 ring-[#fbbf24]/30' : 'bg-[#2b4238]'
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center gap-1 text-xs font-pixel-tc text-[#fbbf24] font-bold">
-            <span>{stepIndex === instructions.length - 1 ? '開始守護河川' : '下一句'}</span>
-            <ChevronRight className="w-4 h-4" />
-          </div>
+        <div className="pencil-btn-green px-3.5 py-1.5 flex items-center gap-1 text-xs font-pixel-tc font-bold">
+          <span>{stepIndex === instructions.length - 1 ? '進入遊戲' : '下一步'}</span>
+          <ChevronRight className="w-4 h-4" />
         </div>
       </div>
     </div>

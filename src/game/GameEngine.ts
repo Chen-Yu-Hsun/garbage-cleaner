@@ -784,11 +784,13 @@ export class GameEngine {
     for (const ft of this.floatingTexts) {
       ctx.save();
       ctx.globalAlpha = ft.alpha;
-      ctx.fillStyle = ft.color;
-      ctx.font = `bold ${ft.fontSize}px "DotGothic16", monospace`;
+      ctx.font = `bold ${ft.fontSize}px "DotGothic16", sans-serif`;
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 4;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#26201b';
+      ctx.lineWidth = 3.2;
+      ctx.strokeText(ft.text, ft.x, ft.y);
+      ctx.fillStyle = ft.color;
       ctx.fillText(ft.text, ft.x, ft.y);
       ctx.restore();
     }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Sparkles, Film } from 'lucide-react';
+import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Film } from 'lucide-react';
 import { sound } from '../audio/soundManager';
 import { MossMonsterSprite } from './MossMonsterSprite';
 import { WaterSpiritSprite } from './WaterSpiritSprite';
@@ -21,11 +21,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onOpenInstructions,
   onReplayIntro,
 }) => {
-  const [errorMsg, setErrorMsg] = useState('');
   const [isMuted, setIsMuted] = useState(sound.getMuted());
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleStart = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleStart = (e: React.FormEvent) => {
+    e.preventDefault();
     const clean = nickname.trim();
     if (clean.length < 2 || clean.length > 12) {
       setErrorMsg('暱稱長度需介於 2 至 12 個字元！');
@@ -43,16 +43,31 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[480px] sm:min-h-[520px] flex flex-col justify-between items-center p-4 sm:p-6 bg-gradient-to-b from-[#1c322b] via-[#13221e] to-[#0c1614] text-slate-100 select-none overflow-y-auto sm:overflow-hidden">
-      {/* Background Decorative Picture-Book River Horizon */}
-      <div className="absolute inset-0 bg-[radial-gradient(#2dd4bf_1px,transparent_1px)] opacity-5 [background-size:20px_20px] pointer-events-none" />
-      <div className="absolute top-1/3 w-full h-px bg-[#263c34]/70" />
-      <div className="absolute bottom-0 w-full h-28 bg-gradient-to-t from-[#09352e]/40 to-transparent pointer-events-none" />
+    <div className="relative w-full h-full min-h-[480px] sm:min-h-[520px] flex flex-col justify-between items-center p-4 sm:p-6 pencil-paper-bg text-[#2c2520] select-none overflow-y-auto sm:overflow-hidden">
+      {/* Decorative Colored-Pencil Sky Top & River Bottom */}
+      <div
+        className="absolute top-0 inset-x-0 h-28 pointer-events-none opacity-45"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(-33deg, rgba(59, 130, 246, 0.35) 0px, rgba(59, 130, 246, 0.35) 1.5px, transparent 1.5px, transparent 5px)',
+          maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
+        }}
+      />
+      <div
+        className="absolute bottom-0 inset-x-0 h-24 pointer-events-none opacity-55"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(-26deg, rgba(14, 165, 233, 0.42) 0px, rgba(13, 148, 136, 0.42) 2px, transparent 2px, transparent 5px)',
+          maskImage: 'linear-gradient(to top, black 50%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to top, black 50%, transparent 100%)',
+        }}
+      />
 
       {/* Top Controls Bar */}
       <div className="w-full max-w-2xl flex items-center justify-between z-10">
-        <div className="flex items-center gap-2 text-xs font-pixel-tc text-[#8fa89b]">
-          <Shield className="w-4 h-4 text-[#34d399]" />
+        <div className="pencil-hud-pill px-3 py-1.5 flex items-center gap-2 text-xs font-pixel-tc">
+          <Shield className="w-4 h-4 text-[#6ee7b7]" />
           <span>傷心湯 · 河川環境保護行動</span>
         </div>
 
@@ -63,70 +78,80 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                 sound.playClick();
                 onReplayIntro();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#182a24] hover:bg-[#223931] border border-[#2d453b] text-xs font-pixel-tc text-[#e2ede8] hover:text-[#fbbf24] transition-colors cursor-pointer shadow-sm"
+              className="pencil-hud-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-pixel-tc hover:brightness-110 transition-all cursor-pointer"
               title="觀看宣傳片頭影片"
             >
-              <Film className="w-3.5 h-3.5 text-[#fbbf24]" />
+              <Film className="w-3.5 h-3.5 text-[#facc15]" />
               <span>觀看片頭</span>
             </button>
           )}
 
           <button
-            onClick={onOpenInstructions}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#182a24] hover:bg-[#223931] border border-[#2d453b] text-xs font-pixel-tc text-[#c9ded5] hover:text-white transition-colors cursor-pointer shadow-sm"
+            onClick={() => {
+              sound.playClick();
+              onOpenInstructions();
+            }}
+            className="pencil-hud-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-pixel-tc hover:brightness-110 transition-all cursor-pointer"
+            title="操作說明"
           >
-            <HelpCircle className="w-3.5 h-3.5 text-[#38bdf8]" />
-            <span>玩法指南</span>
+            <HelpCircle className="w-3.5 h-3.5 text-[#7dd3fc]" />
+            <span>遊戲說明</span>
           </button>
 
           <button
             onClick={handleToggleMute}
-            className="p-2 rounded-lg bg-[#182a24] hover:bg-[#223931] border border-[#2d453b] text-slate-200 transition-colors cursor-pointer shadow-sm"
+            className="pencil-hud-pill p-2 hover:brightness-110 transition-all cursor-pointer"
             title="音效開關"
           >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-[#34d399]" />}
+            {isMuted ? (
+              <VolumeX className="w-4 h-4 text-[#f87171]" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-[#6ee7b7]" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Center Game Logo & Hero Title */}
-      <div className="z-10 text-center my-auto space-y-6 max-w-lg w-full">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-[#b45309]/20 border border-[#f59e0b]/40 text-[#fbbf24] text-xs font-pixel">
+      <div className="z-10 text-center my-auto space-y-4 max-w-lg w-full">
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 pencil-combo-pill text-[#facc15] text-xs font-pixel">
             LEVEL 1: 傷心湯 (SAD SOUP)
           </div>
 
-          <h1 className="text-3xl md:text-5xl font-black font-pixel-tc text-white tracking-wider drop-shadow-[0_4px_16px_rgba(0,0,0,0.7)]">
+          <h1 className="text-3xl md:text-5xl font-black font-pixel-tc text-[#2b221a] tracking-wider drop-shadow-[2px_2px_0px_rgba(255,250,240,0.95)]">
             醜泥怪：河川守護者
           </h1>
-          <p className="text-xs md:text-sm font-pixel-tc text-[#9bb5a8]">
+          <p className="text-xs md:text-sm font-pixel-tc text-[#5c4a38] font-bold">
             接取掉落垃圾 · 淨化河川水質 · 7連擊變身米多力
           </p>
         </div>
 
-        {/* Character Avatar Icon Pixel Preview */}
-        <div className="flex items-center justify-center gap-6 py-2">
+        {/* Character Avatar Icon Colored-Pencil Preview */}
+        <div className="flex items-center justify-center gap-5 py-1">
           <div className="flex flex-col items-center gap-1">
-            <div className="w-16 h-16 rounded-xl bg-[#233522]/90 border-2 border-[#527043] flex items-center justify-center shadow-lg shadow-black/30 overflow-hidden">
+            <div className="w-16 h-16 pencil-card bg-[#eef5e6] flex items-center justify-center overflow-hidden">
               <MossMonsterSprite size={48} />
             </div>
-            <span className="text-[11px] font-pixel-tc text-[#a3e635] font-bold">醜泥怪 (一般)</span>
+            <span className="text-xs font-pixel-tc text-[#3d5a2b] font-bold">醜泥怪 (一般)</span>
           </div>
-          <span className="text-[#34d399] font-pixel text-sm">→ 7連擊 →</span>
+          <span className="pencil-hud-pill px-2.5 py-1 text-[#facc15] font-pixel text-xs">
+            → 7連擊 →
+          </span>
           <div className="flex flex-col items-center gap-1">
-            <div className="w-16 h-16 rounded-xl bg-[#0e3b3a]/90 border-2 border-[#14b8a6] flex items-center justify-center shadow-lg shadow-[#14b8a6]/25 overflow-hidden">
+            <div className="w-16 h-16 pencil-card bg-[#e6f6fa] flex items-center justify-center overflow-hidden">
               <WaterSpiritSprite size={48} />
             </div>
-            <span className="text-[11px] font-pixel-tc text-[#2dd4bf] font-bold">米多力 (無敵)</span>
+            <span className="text-xs font-pixel-tc text-[#18647d] font-bold">米多力 (無敵)</span>
           </div>
         </div>
 
         {/* Nickname Input & Start Form */}
-        <form onSubmit={handleStart} className="space-y-4 bg-[#162722]/95 p-5 rounded-2xl border-2 border-[#2b4238] shadow-2xl shadow-black/60">
+        <form onSubmit={handleStart} className="space-y-4 pencil-card p-5">
           <div className="text-left space-y-1.5">
-            <label className="text-xs font-pixel-tc text-[#c9ded5] font-medium flex items-center justify-between">
+            <label className="text-xs font-pixel-tc text-[#3d3228] font-bold flex items-center justify-between">
               <span>守護者暱稱（2–12 字元）</span>
-              <span className="text-[11px] text-[#718f81]">{nickname.trim().length} / 12</span>
+              <span className="text-[11px] text-[#786552]">{nickname.trim().length} / 12</span>
             </label>
             <input
               type="text"
@@ -137,19 +162,21 @@ export const StartScreen: React.FC<StartScreenProps> = ({
               }}
               placeholder="請輸入你的暱稱..."
               maxLength={12}
-              className="w-full px-4 py-2.5 rounded-lg bg-[#0d1715] border border-[#2d453b] text-white font-pixel-tc text-sm focus:outline-none focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#fffdf8] border-2 border-[#4a3b2c] text-[#2c2520] font-pixel-tc text-sm focus:outline-none focus:border-[#4d8b55] focus:ring-2 focus:ring-[#4d8b55]/30 shadow-inner transition-colors"
             />
             {errorMsg && (
-              <p className="text-xs font-pixel-tc text-red-400 font-semibold">{errorMsg}</p>
+              <p className="text-xs text-[#dc2626] font-pixel-tc font-bold animate-bounce">
+                {errorMsg}
+              </p>
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <button
               type="submit"
-              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-[#10b981] hover:bg-[#059669] text-slate-950 font-bold font-pixel-tc text-sm transition-all shadow-lg shadow-[#10b981]/25 active:translate-y-0.5 cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-6 pencil-btn-green font-bold font-pixel-tc text-base transition-transform active:translate-y-0.5 cursor-pointer"
             >
-              <Play className="w-4 h-4 fill-current" />
+              <Play className="w-5 h-5 fill-current" />
               <span>開始守護河川</span>
             </button>
 
@@ -159,18 +186,18 @@ export const StartScreen: React.FC<StartScreenProps> = ({
                 sound.playClick();
                 onOpenLeaderboard();
               }}
-              className="flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-[#20342d] hover:bg-[#2b443b] border border-[#375247] text-[#fbbf24] font-pixel-tc text-sm transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-2 py-3 px-5 pencil-btn-amber font-bold font-pixel-tc text-sm transition-transform active:translate-y-0.5 cursor-pointer"
             >
-              <Trophy className="w-4 h-4 text-[#fbbf24]" />
-              <span>雲端排行榜</span>
+              <Trophy className="w-4 h-4 text-[#fffdf7]" />
+              <span>排行榜</span>
             </button>
           </div>
         </form>
       </div>
 
-      {/* Footer Info */}
-      <div className="z-10 text-center text-[11px] font-pixel-tc text-[#718f81] pt-4">
-        <span>鍵盤 A/D 或 ←/→ 移動 · 手機直接觸控拖曳 · 保持河川清澈</span>
+      {/* Bottom Controls Hint */}
+      <div className="z-10 text-center text-xs font-pixel-tc text-[#5c4a38] font-bold">
+        電腦操作：【A / D】或【← / →】方向鍵移動 ｜ 手機操作：直接觸控拖曳或點擊左右按鈕
       </div>
     </div>
   );
