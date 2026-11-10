@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Sparkles } from 'lucide-react';
+import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Sparkles, Film } from 'lucide-react';
 import { sound } from '../audio/soundManager';
 
 interface StartScreenProps {
@@ -8,6 +8,7 @@ interface StartScreenProps {
   onStartGame: () => void;
   onOpenLeaderboard: () => void;
   onOpenInstructions: () => void;
+  onReplayIntro?: () => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({
@@ -16,6 +17,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onStartGame,
   onOpenLeaderboard,
   onOpenInstructions,
+  onReplayIntro,
 }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [isMuted, setIsMuted] = useState(sound.getMuted());
@@ -53,9 +55,23 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onReplayIntro && (
+            <button
+              onClick={() => {
+                sound.playClick();
+                onReplayIntro();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-pixel-tc text-slate-300 hover:text-amber-300 transition-colors cursor-pointer"
+              title="觀看宣傳片頭影片"
+            >
+              <Film className="w-3.5 h-3.5 text-amber-400" />
+              <span>觀看片頭</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenInstructions}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-pixel-tc text-slate-300 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-pixel-tc text-slate-300 transition-colors cursor-pointer"
           >
             <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
             <span>玩法指南</span>

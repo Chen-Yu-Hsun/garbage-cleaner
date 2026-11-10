@@ -197,6 +197,7 @@ export default function App() {
             onStartGame={handleStartGame}
             onOpenLeaderboard={() => setShowLeaderboard(true)}
             onOpenInstructions={() => setShowInstructions(true)}
+            onReplayIntro={() => setFlowState('INTRO_VIDEO')}
           />
         )}
 
