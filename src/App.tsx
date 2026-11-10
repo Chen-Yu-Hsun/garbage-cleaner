@@ -52,7 +52,8 @@ export default function App() {
   const engineRef = useRef<GameEngine | null>(null);
 
   // Stage Curtain Transition State (舞台開閉幕過場)
-  const [isCurtainClosed, setIsCurtainClosed] = useState(false);
+  // Initially true so that when the intro video starts, the stage curtain pulls open!
+  const [isCurtainClosed, setIsCurtainClosed] = useState(true);
   const pendingActionRef = useRef<(() => void) | null>(null);
 
   const executeWithCurtain = useCallback((action: () => void) => {
@@ -71,6 +72,28 @@ export default function App() {
       sound.playCurtain();
       setIsCurtainClosed(false);
     }, 140);
+  }, []);
+
+  // Pull open curtain when intro video starts playing
+  const handleVideoStart = useCallback(() => {
+    if (isCurtainClosed) {
+      sound.playCurtain();
+      setIsCurtainClosed(false);
+    }
+  }, [isCurtainClosed]);
+
+  // Initial mount fallback to ensure curtain pulls open even if browser autoplay is delayed
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsCurtainClosed((prev) => {
+        if (prev) {
+          sound.playCurtain();
+          return false;
+        }
+        return false;
+      });
+    }, 350);
+    return () => clearTimeout(timer);
   }, []);
 
   // Save nickname when changed
@@ -203,18 +226,25 @@ export default function App() {
   };
 
   return (
-    <main className="w-screen h-screen flex flex-col items-center justify-center pencil-paper-bg p-0 sm:p-2 md:p-4 overflow-hidden select-none">
-      {/* Dynamically Responsive Container */}
+    <main
+      className={`w-screen h-screen flex flex-col items-center justify-center pencil-paper-bg overflow-hidden select-none ${
+        flowState === 'INTRO_VIDEO' ? 'p-0' : 'p-0 sm:p-2 md:p-4'
+      }`}
+    >
+      {/* Dynamically Responsive Container - Full-bleed (滿板) for intro video */}
       <div
         className={`relative w-full h-full flex items-center justify-center overflow-hidden transition-all duration-300 ${
           flowState === 'INTRO_VIDEO'
-            ? 'w-full h-full bg-black'
+            ? 'w-full h-full max-w-none max-h-none rounded-none border-0 shadow-none bg-black'
             : 'max-w-[1280px] max-h-[96vh] sm:aspect-[16/9] bg-[#fcf8f0] sm:rounded-2xl border-0 sm:border-[3.5px] border-[#3d3228] shadow-[4px_6px_0px_#3d3228,0_18px_40px_rgba(60,45,30,0.28)] pencil-viewport-overlay'
         }`}
       >
-        {/* Intro Cutscene State */}
+        {/* Intro Cutscene State (滿板影片 + 開播時布幕拉起特效) */}
         {flowState === 'INTRO_VIDEO' && (
-          <IntroCutscene onComplete={() => executeWithCurtain(() => setFlowState('INSTRUCTIONS'))} />
+          <IntroCutscene
+            onVideoStart={handleVideoStart}
+            onComplete={() => executeWithCurtain(() => setFlowState('INSTRUCTIONS'))}
+          />
         )}
 
         {/* Step-by-step Instructions State */}

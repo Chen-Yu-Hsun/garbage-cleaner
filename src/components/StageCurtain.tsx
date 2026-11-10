@@ -160,23 +160,6 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
       </div>
 
       {/* =========================================================================
-          CENTER THEATRE EMBLEM (舞台閉幕中央金色徽章)
-          ========================================================================= */}
-      <div
-        className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 transition-all duration-300 pointer-events-none ${
-          isClosed ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
-        }`}
-      >
-        <div className="px-6 py-2.5 rounded-2xl bg-[#450a0a] border-2 border-[#eab308] shadow-[0_8px_25px_rgba(0,0,0,0.8),inset_0_2px_0_rgba(255,235,180,0.4)] flex items-center gap-3 text-[#fef08a]">
-          <span className="text-xl">🎭</span>
-          <span className="font-pixel-tc text-sm sm:text-base font-black tracking-widest text-[#facc15] drop-shadow-sm">
-            傷心湯 · 舞台劇場
-          </span>
-          <span className="text-xl">🎭</span>
-        </div>
-      </div>
-
-      {/* =========================================================================
           TOP THEATRICAL VALANCE (舞台頂部橫楣拱幔)
           Retracts upward when the curtain opens so it never blocks the game!
           ========================================================================= */}

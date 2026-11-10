@@ -4,9 +4,10 @@ import { sound } from '../audio/soundManager';
 
 interface IntroCutsceneProps {
   onComplete: () => void;
+  onVideoStart?: () => void;
 }
 
-export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ onComplete }) => {
+export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ onComplete, onVideoStart }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [needsUserUnmute, setNeedsUserUnmute] = useState(false);
@@ -25,16 +26,21 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ onComplete }) => {
       playPromise
         .then(() => {
           // Playback started successfully
+          onVideoStart?.();
         })
         .catch(() => {
           // Autoplay with audio was prevented by browser policy; fallback to muted autoplay
           video.muted = true;
           setIsMuted(true);
           setNeedsUserUnmute(true);
-          video.play().catch(() => {});
+          video.play().then(() => {
+            onVideoStart?.();
+          }).catch(() => {
+            onVideoStart?.();
+          });
         });
     }
-  }, []);
+  }, [onVideoStart]);
 
   const handleTogglePlay = () => {
     const video = videoRef.current;
@@ -87,15 +93,16 @@ export const IntroCutscene: React.FC<IntroCutsceneProps> = ({ onComplete }) => {
       onClick={handleTogglePlay}
       className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden select-none cursor-pointer"
     >
-      {/* Pure Native Video Player - Dynamically responsive to any viewport size */}
+      {/* Pure Native Full-Bleed Video Player (滿板) */}
       <video
         ref={videoRef}
         src="/intro.mp4"
         autoPlay
         playsInline
         preload="auto"
+        onPlay={onVideoStart}
         onEnded={onComplete}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
       />
 
       {/* Discreet floating controls (No timeline / scrubbers - pure native video) */}
