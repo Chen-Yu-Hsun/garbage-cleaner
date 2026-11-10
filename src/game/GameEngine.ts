@@ -46,6 +46,7 @@ export class GameEngine {
   public playerSpeed = 380; // px/s
   public moveLeft = false;
   public moveRight = false;
+  public facingRight = false; // Mirror sprite horizontally when moving right
   public isTouching = false;
   public targetTouchX: number | null = null;
   public walkCycle = 0;
@@ -179,6 +180,7 @@ export class GameEngine {
     this.playerX = 480;
     this.moveLeft = false;
     this.moveRight = false;
+    this.facingRight = false;
     this.isTouching = false;
     this.targetTouchX = null;
     this.walkCycle = 0;
@@ -347,6 +349,11 @@ export class GameEngine {
 
     if (moveDir !== 0) {
       this.playerX += moveDir * this.playerSpeed * delta;
+      if (moveDir > 0) {
+        this.facingRight = true;
+      } else if (moveDir < 0) {
+        this.facingRight = false;
+      }
     }
 
     // Clamping to play bounds based on character width
@@ -745,17 +752,17 @@ export class GameEngine {
     const isMoving = this.moveLeft || this.moveRight || (this.isTouching && this.targetTouchX !== null);
 
     if (this.characterMode === 'MIDORI_INVINCIBLE') {
-      drawMidori(ctx, this.playerX, this.RIVER_Y, charW, charH, isMoving, this.walkCycle, this.isCatchingAnim > 0);
+      drawMidori(ctx, this.playerX, this.RIVER_Y, charW, charH, isMoving, this.walkCycle, this.isCatchingAnim > 0, this.facingRight);
     } else if (this.characterMode === 'TRANSFORMING') {
       // Flashes between Mud Monster and Midori during 1s pause
       const flash = Math.sin(this.flashCycle * 25) > 0;
       if (flash) {
-        drawMidori(ctx, this.playerX, this.RIVER_Y, charW, charH, false, this.walkCycle, true);
+        drawMidori(ctx, this.playerX, this.RIVER_Y, charW, charH, false, this.walkCycle, true, this.facingRight);
       } else {
-        drawMudMonster(ctx, this.playerX, this.RIVER_Y, charW, charH, false, this.walkCycle, true, true);
+        drawMudMonster(ctx, this.playerX, this.RIVER_Y, charW, charH, false, this.walkCycle, true, true, this.facingRight);
       }
     } else {
-      drawMudMonster(ctx, this.playerX, this.RIVER_Y, charW, charH, isMoving, this.walkCycle, this.isCatchingAnim > 0, false);
+      drawMudMonster(ctx, this.playerX, this.RIVER_Y, charW, charH, isMoving, this.walkCycle, this.isCatchingAnim > 0, false, this.facingRight);
     }
 
     // 7. Draw Particles

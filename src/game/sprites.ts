@@ -113,10 +113,16 @@ export function drawMudMonster(
   isMoving: boolean,
   walkCycle: number,
   isCatching: boolean,
-  isFlashing: boolean
+  isFlashing: boolean = false,
+  flipX: boolean = false
 ) {
   ctx.save();
   ctx.translate(Math.floor(centerX), Math.floor(bottomY));
+
+  // Mirror horizontally based on movement direction
+  if (flipX) {
+    ctx.scale(-1, 1);
+  }
 
   // If flashing during transformation
   if (isFlashing) {
@@ -252,10 +258,16 @@ export function drawMidori(
   baseHeight: number,
   isMoving: boolean,
   walkCycle: number,
-  isCatching: boolean
+  isCatching: boolean,
+  flipX: boolean = false
 ) {
   ctx.save();
   ctx.translate(Math.floor(centerX), Math.floor(bottomY));
+
+  // Mirror horizontally based on movement direction
+  if (flipX) {
+    ctx.scale(-1, 1);
+  }
 
   const bob = isMoving ? Math.sin(walkCycle * 10) * 4 : Math.sin(walkCycle * 4) * 2;
   const squash = isMoving ? 1 + Math.sin(walkCycle * 10) * 0.05 : 1;
