@@ -41,7 +41,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[520px] flex flex-col justify-between items-center p-6 bg-slate-950 text-slate-100 select-none overflow-hidden">
+    <div className="relative w-full h-full min-h-[480px] sm:min-h-[520px] flex flex-col justify-between items-center p-4 sm:p-6 bg-slate-950 text-slate-100 select-none overflow-y-auto sm:overflow-hidden">
       {/* Background Decorative River Horizon */}
       <div className="absolute inset-0 bg-gradient-to-b from-sky-950 via-slate-950 to-slate-900 pointer-events-none" />
       <div className="absolute top-1/3 w-full h-px bg-slate-800" />

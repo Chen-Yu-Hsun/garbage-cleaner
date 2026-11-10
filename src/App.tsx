@@ -176,9 +176,15 @@ export default function App() {
   };
 
   return (
-    <main className="w-screen h-screen flex flex-col items-center justify-center bg-slate-950 p-2 sm:p-4 overflow-hidden select-none">
-      {/* 16:9 Aspect Ratio Arcade Cabinet Container */}
-      <div className="relative w-full max-w-[1040px] aspect-[16/9] max-h-[92vh] bg-black rounded-2xl overflow-hidden border-4 border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.9)] crt-overlay flex items-center justify-center">
+    <main className="w-screen h-screen flex flex-col items-center justify-center bg-slate-950 p-0 sm:p-2 md:p-4 overflow-hidden select-none">
+      {/* Dynamically Responsive Container */}
+      <div
+        className={`relative w-full h-full flex items-center justify-center overflow-hidden transition-all duration-300 ${
+          flowState === 'INTRO_VIDEO'
+            ? 'w-full h-full bg-black'
+            : 'max-w-[1280px] max-h-[96vh] sm:aspect-[16/9] bg-black sm:rounded-2xl border-0 sm:border-4 border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.9)] crt-overlay'
+        }`}
+      >
         {/* Intro Cutscene State */}
         {flowState === 'INTRO_VIDEO' && (
           <IntroCutscene onComplete={() => setFlowState('INSTRUCTIONS')} />

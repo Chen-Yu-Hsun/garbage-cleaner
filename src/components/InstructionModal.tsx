@@ -79,7 +79,7 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
   return (
     <div
       onClick={handleNext}
-      className="relative w-full h-full min-h-[500px] flex flex-col justify-between p-6 bg-slate-950 text-slate-100 cursor-pointer select-none overflow-hidden"
+      className="relative w-full h-full min-h-[460px] sm:min-h-[500px] flex flex-col justify-between p-4 sm:p-6 bg-slate-950 text-slate-100 cursor-pointer select-none overflow-y-auto sm:overflow-hidden"
     >
       {/* Background Grid Pattern */}
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
