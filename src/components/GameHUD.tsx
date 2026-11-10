@@ -68,21 +68,21 @@ export const GameHUD: React.FC<GameHUDProps> = ({
         {/* Left: Score & Survival Time */}
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* Score Box */}
-          <div className="px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-700/80 shadow-md flex items-center gap-2">
-            <span className="text-[11px] font-pixel text-slate-400">SCORE</span>
-            <span className="text-base font-pixel text-amber-400 tabular-nums">{score}</span>
+          <div className="px-3 py-1.5 rounded-lg bg-[#162722]/90 border border-[#2c443b] shadow-md backdrop-blur-sm flex items-center gap-2">
+            <span className="text-[11px] font-pixel text-[#8fa89b]">SCORE</span>
+            <span className="text-base font-pixel text-[#fbbf24] tabular-nums">{score}</span>
           </div>
 
           {/* Time Box */}
-          <div className="px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-700/80 shadow-md flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
+          <div className="px-3 py-1.5 rounded-lg bg-[#162722]/90 border border-[#2c443b] shadow-md backdrop-blur-sm flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-[#8fa89b]" />
             <span className="text-xs font-pixel text-slate-200 tabular-nums">{formatTime(survivalTime)}</span>
           </div>
 
           {/* Scale Badge */}
-          <div className="hidden sm:flex px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-700/80 text-[11px] font-pixel-tc text-emerald-300 items-center gap-1">
+          <div className="hidden sm:flex px-2.5 py-1.5 rounded-lg bg-[#162722]/90 border border-[#2c443b] text-[11px] font-pixel-tc text-[#34d399] items-center gap-1 shadow-md backdrop-blur-sm">
             <span>體型</span>
-            <span className="font-pixel text-[10px] text-emerald-400 font-bold">
+            <span className="font-pixel text-[10px] text-[#34d399] font-bold">
               {Math.round(growthScale * 100)}%
             </span>
           </div>
@@ -90,21 +90,21 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
         {/* Center: Pollution Meter (0 - 20) */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          <div className="px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-700/80 shadow-md flex items-center gap-2.5">
-            <div className="flex items-center gap-1 text-xs font-pixel-tc text-slate-300">
-              <Droplet className={`w-3.5 h-3.5 ${waterQuality === 'BLUE' ? 'text-sky-400' : 'text-amber-500'}`} />
+          <div className="px-3 py-1.5 rounded-lg bg-[#162722]/90 border border-[#2c443b] shadow-md backdrop-blur-sm flex items-center gap-2.5">
+            <div className="flex items-center gap-1 text-xs font-pixel-tc text-[#c9ded5]">
+              <Droplet className={`w-3.5 h-3.5 ${waterQuality === 'BLUE' ? 'text-[#38bdf8]' : 'text-[#f59e0b]'}`} />
               <span>污染</span>
             </div>
 
             {/* Visual Gauge Bar */}
-            <div className="w-24 sm:w-32 h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-700 flex">
+            <div className="w-24 sm:w-32 h-2.5 bg-[#0b1412] rounded-full overflow-hidden border border-[#2c443b] flex">
               <div
                 className={`h-full transition-all duration-200 ${
                   pollutionCount < 10
-                    ? 'bg-sky-500'
+                    ? 'bg-[#0ea5e9]'
                     : pollutionCount < 18
-                    ? 'bg-amber-500 animate-pulse'
-                    : 'bg-red-500 animate-pulse'
+                    ? 'bg-[#f59e0b] animate-pulse'
+                    : 'bg-[#ef4444] animate-pulse'
                 }`}
                 style={{ width: `${(pollutionCount / 20) * 100}%` }}
               />
@@ -138,19 +138,19 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           {/* Sound Mute Toggle */}
           <button
             onClick={() => sound.toggleMute()}
-            className="p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+            className="p-2 rounded-lg bg-[#162722]/90 hover:bg-[#223931] border border-[#2c443b] text-slate-300 transition-colors cursor-pointer shadow-md"
             title="音效開關"
           >
-            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-[#34d399]" />}
           </button>
 
           {/* Pause Toggle */}
           <button
             onClick={onTogglePause}
-            className="p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 transition-colors cursor-pointer"
+            className="p-2 rounded-lg bg-[#162722]/90 hover:bg-[#223931] border border-[#2c443b] text-slate-300 transition-colors cursor-pointer shadow-md"
             title={isPaused ? '繼續遊戲' : '暫停遊戲'}
           >
-            {isPaused ? <Play className="w-4 h-4 text-amber-400" /> : <Pause className="w-4 h-4" />}
+            {isPaused ? <Play className="w-4 h-4 text-[#fbbf24]" /> : <Pause className="w-4 h-4" />}
           </button>
 
           {/* Return Home Button */}
@@ -160,7 +160,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                 sound.playClick();
                 onReturnHome();
               }}
-              className="p-2 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-sky-300 transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-[#162722]/90 hover:bg-[#223931] border border-[#2c443b] text-slate-300 hover:text-[#38bdf8] transition-colors cursor-pointer shadow-md"
               title="返回首頁"
             >
               <Home className="w-4 h-4" />
@@ -172,22 +172,22 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       {/* Combo Counter & 15s Countdown Gauge (Top Center below bar) */}
       {comboCount > 0 && (
         <div className="self-center mt-2 pointer-events-auto">
-          <div className="px-3 py-1.5 rounded-lg bg-slate-900/95 border border-amber-500/60 shadow-lg flex items-center gap-3">
-            <div className="flex items-center gap-1 text-amber-400">
-              <Flame className="w-4 h-4 fill-amber-500 text-amber-400 animate-bounce" />
-              <span className="font-pixel text-xs text-amber-300">COMBO</span>
+          <div className="px-3 py-1.5 rounded-lg bg-[#162722]/95 border border-[#f59e0b]/70 shadow-lg flex items-center gap-3 backdrop-blur-sm">
+            <div className="flex items-center gap-1 text-[#fbbf24]">
+              <Flame className="w-4 h-4 fill-[#f59e0b] text-[#fbbf24] animate-bounce" />
+              <span className="font-pixel text-xs text-[#fbbf24]">COMBO</span>
               <span className="font-pixel text-sm text-white font-bold ml-1">{comboCount}</span>
-              <span className="text-xs text-slate-400 font-pixel">/ 7</span>
+              <span className="text-xs text-[#8fa89b] font-pixel">/ 7</span>
             </div>
 
             {/* 15s Countdown Progress */}
-            <div className="w-20 h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+            <div className="w-20 h-2 bg-[#0b1412] rounded-full overflow-hidden border border-[#2c443b]">
               <div
-                className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-100"
+                className="h-full bg-gradient-to-r from-[#f59e0b] to-[#34d399] transition-all duration-100"
                 style={{ width: `${comboPercent}%` }}
               />
             </div>
-            <span className="text-[10px] font-pixel text-slate-400 tabular-nums">
+            <span className="text-[10px] font-pixel text-[#8fa89b] tabular-nums">
               {Math.max(0, comboTimer).toFixed(1)}s
             </span>
           </div>
@@ -202,7 +202,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           onMouseDown={onMoveLeftStart}
           onMouseUp={onMoveLeftEnd}
           onMouseLeave={onMoveLeftEnd}
-          className="pointer-events-auto md:hidden w-16 h-16 rounded-2xl bg-slate-900/80 active:bg-amber-500/40 border-2 border-slate-700 text-2xl font-bold flex items-center justify-center text-white active:scale-95 transition-all shadow-xl backdrop-blur-xs select-none touch-none"
+          className="pointer-events-auto md:hidden w-16 h-16 rounded-2xl bg-[#162722]/85 active:bg-[#10b981]/40 border-2 border-[#2c443b] text-2xl font-bold flex items-center justify-center text-white active:scale-95 transition-all shadow-xl backdrop-blur-xs select-none touch-none"
         >
           ◀
         </button>
@@ -213,7 +213,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
           onMouseDown={onMoveRightStart}
           onMouseUp={onMoveRightEnd}
           onMouseLeave={onMoveRightEnd}
-          className="pointer-events-auto md:hidden w-16 h-16 rounded-2xl bg-slate-900/80 active:bg-amber-500/40 border-2 border-slate-700 text-2xl font-bold flex items-center justify-center text-white active:scale-95 transition-all shadow-xl backdrop-blur-xs select-none touch-none"
+          className="pointer-events-auto md:hidden w-16 h-16 rounded-2xl bg-[#162722]/85 active:bg-[#10b981]/40 border-2 border-[#2c443b] text-2xl font-bold flex items-center justify-center text-white active:scale-95 transition-all shadow-xl backdrop-blur-xs select-none touch-none"
         >
           ▶
         </button>

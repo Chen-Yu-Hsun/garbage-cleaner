@@ -79,17 +79,17 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
   return (
     <div
       onClick={handleNext}
-      className="relative w-full h-full min-h-[460px] sm:min-h-[500px] flex flex-col justify-between p-4 sm:p-6 bg-slate-950 text-slate-100 cursor-pointer select-none overflow-y-auto sm:overflow-hidden"
+      className="relative w-full h-full min-h-[460px] sm:min-h-[500px] flex flex-col justify-between p-4 sm:p-6 bg-gradient-to-b from-[#1b2e28] via-[#13221e] to-[#0c1614] text-slate-100 cursor-pointer select-none overflow-y-auto sm:overflow-hidden"
     >
       {/* Background Grid Pattern */}
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#34d399_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
       {/* Top Header */}
       <div className="flex items-center justify-between z-10">
         <div className="flex items-center gap-2">
-          <span className="font-pixel text-xs text-amber-400">TUTORIAL</span>
-          <span className="text-slate-500">·</span>
-          <span className="text-xs font-pixel-tc text-slate-400">操作說明</span>
+          <span className="font-pixel text-xs text-[#fbbf24]">TUTORIAL</span>
+          <span className="text-[#5a786c]">·</span>
+          <span className="text-xs font-pixel-tc text-[#9bb5a8]">操作說明</span>
         </div>
 
         <button
@@ -98,42 +98,42 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
             sound.playClick();
             onComplete();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-pixel-tc text-slate-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#182a24] hover:bg-[#223931] border border-[#2d453b] text-xs font-pixel-tc text-[#c9ded5] hover:text-white transition-colors cursor-pointer shadow-sm"
         >
           <span>跳過說明</span>
-          <SkipForward className="w-3.5 h-3.5 text-amber-400" />
+          <SkipForward className="w-3.5 h-3.5 text-[#fbbf24]" />
         </button>
       </div>
 
       {/* Main Dialogue Card */}
       <div className="z-10 max-w-xl mx-auto w-full my-auto space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-slate-900 border-2 border-amber-500/50 flex items-center justify-center text-2xl shadow-inner">
+          <div className="w-12 h-12 rounded-xl bg-[#20332c] border-2 border-[#10b981]/60 flex items-center justify-center text-2xl shadow-inner shadow-black/40">
             {current.icon}
           </div>
           <div>
-            <div className="text-xs font-pixel text-amber-400">STEP {current.step} / 06</div>
-            <h3 className="text-sm font-pixel-tc text-slate-300 font-semibold">{current.kicker}</h3>
+            <div className="text-xs font-pixel text-[#fbbf24]">STEP {current.step} / 06</div>
+            <h3 className="text-sm font-pixel-tc text-[#e2ece7] font-semibold">{current.kicker}</h3>
           </div>
         </div>
 
         {/* Narrative Box with retro pixel border */}
-        <div className="p-6 rounded-lg bg-slate-900/90 border-2 border-slate-700 shadow-2xl relative">
+        <div className="p-6 rounded-2xl bg-[#162722]/95 border-2 border-[#2b4238] shadow-2xl relative">
           <p className="text-lg md:text-xl font-bold font-pixel-tc text-white leading-relaxed tracking-wide">
             {current.text}
           </p>
 
-          <div className="mt-4 pt-4 border-t border-slate-800 flex items-start gap-2 text-xs font-pixel-tc text-slate-400">
-            <span className="text-amber-400 shrink-0 font-bold">提示：</span>
+          <div className="mt-4 pt-4 border-t border-[#263c33] flex items-start gap-2 text-xs font-pixel-tc text-[#9bb5a8]">
+            <span className="text-[#fbbf24] shrink-0 font-bold">提示：</span>
             <span>{current.tip}</span>
           </div>
         </div>
       </div>
 
       {/* Bottom Footer Action Guidance */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 z-10 pt-4 border-t border-slate-900">
-        <div className="flex items-center gap-2 text-xs font-pixel-tc text-slate-400">
-          <Keyboard className="w-4 h-4 text-sky-400" />
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 z-10 pt-4 border-t border-[#1e332a]">
+        <div className="flex items-center gap-2 text-xs font-pixel-tc text-[#8fa89b]">
+          <Keyboard className="w-4 h-4 text-[#34d399]" />
           <span>點擊螢幕或按【Enter】繼續</span>
         </div>
 
@@ -143,13 +143,13 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
               <div
                 key={idx}
                 className={`w-2.5 h-2.5 rounded-full ${
-                  idx === stepIndex ? 'bg-amber-400 ring-2 ring-amber-400/30' : 'bg-slate-800'
+                  idx === stepIndex ? 'bg-[#fbbf24] ring-2 ring-[#fbbf24]/30' : 'bg-[#2b4238]'
                 }`}
               />
             ))}
           </div>
 
-          <div className="flex items-center gap-1 text-xs font-pixel-tc text-amber-400 font-bold">
+          <div className="flex items-center gap-1 text-xs font-pixel-tc text-[#fbbf24] font-bold">
             <span>{stepIndex === instructions.length - 1 ? '開始守護河川' : '下一句'}</span>
             <ChevronRight className="w-4 h-4" />
           </div>

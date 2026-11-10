@@ -56,13 +56,14 @@ export function drawMudMonster(
   const curW = w * squash;
   const curH = h / squash;
 
-  // Sludge blob layers (dark brown, medium brown, mud highlight)
-  const cDark = '#3a2210';
-  const cMid = '#5d3b1b';
-  const cLight = '#825528';
-  const cBubble = '#9a6834';
+  // Sludge & moss blob layers matching the official video picture-book style
+  const cDark = '#1e2d19';
+  const cMid = '#334827';
+  const cLight = '#4d693c';
+  const cMoss = '#6b8e56';
+  const cMud = '#6e4c27';
 
-  // Base mud silhouette
+  // Base mossy mud silhouette
   ctx.fillStyle = cDark;
   ctx.beginPath();
   ctx.ellipse(0, bodyY + curH * 0.55, curW * 0.48, curH * 0.45, 0, 0, Math.PI * 2);
@@ -73,7 +74,7 @@ export function drawMudMonster(
   ctx.ellipse(0, bodyY + curH * 0.38, curW * 0.38, curH * 0.35, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Midtone inner body
+  // Midtone inner body (moss green)
   ctx.fillStyle = cMid;
   ctx.beginPath();
   ctx.ellipse(0, bodyY + curH * 0.56, curW * 0.42, curH * 0.38, 0, 0, Math.PI * 2);
@@ -83,14 +84,19 @@ export function drawMudMonster(
   ctx.ellipse(0, bodyY + curH * 0.4, curW * 0.32, curH * 0.3, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sludge highlights & drippy bubbles
+  // Moss highlights & organic sludge patches
   ctx.fillStyle = cLight;
   ctx.fillRect(-curW * 0.25, bodyY + curH * 0.2, curW * 0.15, curH * 0.12);
   ctx.fillRect(curW * 0.12, bodyY + curH * 0.24, curW * 0.12, curH * 0.1);
   ctx.fillRect(-curW * 0.32, bodyY + curH * 0.48, curW * 0.1, curH * 0.12);
 
-  // Mud bubble on top
-  ctx.fillStyle = cBubble;
+  // River mud spots
+  ctx.fillStyle = cMud;
+  ctx.fillRect(-curW * 0.18, bodyY + curH * 0.65, curW * 0.14, curH * 0.09);
+  ctx.fillRect(curW * 0.16, bodyY + curH * 0.62, curW * 0.12, curH * 0.08);
+
+  // Sludge/moss sprout on top
+  ctx.fillStyle = cMoss;
   ctx.beginPath();
   const bubbleY = bodyY + curH * 0.12 + Math.sin(walkCycle * 6) * 3;
   ctx.arc(-curW * 0.15, bubbleY, curW * 0.08, 0, Math.PI * 2);
@@ -265,6 +271,13 @@ export function drawMidori(
   ctx.arc(eyeSpread + 2, eyeY - eyeRadius * 0.35, pupilRadius * 0.45, 0, Math.PI * 2);
   ctx.arc(-eyeSpread - 2, eyeY - eyeRadius * 0.05, pupilRadius * 0.25, 0, Math.PI * 2);
   ctx.arc(eyeSpread - 2, eyeY - eyeRadius * 0.05, pupilRadius * 0.25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rosy blush cheeks matching the official animation style
+  ctx.fillStyle = 'rgba(251, 113, 133, 0.6)';
+  ctx.beginPath();
+  ctx.ellipse(-curW * 0.25, bodyY + curH * 0.45, curW * 0.08, curH * 0.05, 0, 0, Math.PI * 2);
+  ctx.ellipse(curW * 0.25, bodyY + curH * 0.45, curW * 0.08, curH * 0.05, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // Mouth
@@ -637,98 +650,166 @@ export function drawBridgeScene(
   waterQuality: WaterQuality,
   timeSec: number
 ) {
-  // 1. Sky Gradient based on water/environmental state
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, 200);
-  if (waterQuality === 'BLUE') {
-    skyGrad.addColorStop(0, '#38bdf8');
-    skyGrad.addColorStop(1, '#bae6fd');
-  } else if (waterQuality === 'GREY') {
-    skyGrad.addColorStop(0, '#64748b');
-    skyGrad.addColorStop(1, '#cbd5e1');
-  } else {
-    skyGrad.addColorStop(0, '#1e293b');
-    skyGrad.addColorStop(1, '#475569');
-  }
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, width, height * 0.45);
-
-  // 2. Pixel clouds
-  const cloudOffset = (timeSec * 8) % (width + 200);
-  ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(100, 116, 139, 0.4)' : 'rgba(255, 255, 255, 0.7)';
-  // Cloud 1
-  const c1x = (width - cloudOffset) % width;
-  ctx.fillRect(c1x, 25, 60, 12);
-  ctx.fillRect(c1x + 10, 17, 40, 14);
-  // Cloud 2
-  const c2x = (width * 0.6 - cloudOffset * 0.7) % width;
-  ctx.fillRect(c2x, 45, 80, 14);
-  ctx.fillRect(c2x + 15, 36, 50, 16);
-
-  // 3. Distant city/mountain silhouette behind bridge
-  ctx.fillStyle = waterQuality === 'BLUE' ? '#7dd3fc' : '#94a3b8';
-  ctx.fillRect(0, 65, width, 25);
-  for (let i = 0; i < width; i += 35) {
-    const bHeight = 15 + ((i * 13) % 20);
-    ctx.fillRect(i, 65 - bHeight, 22, bHeight);
-  }
-
-  // 4. Large Stone Bridge (Spanning across y = 70 to 115)
   const bridgeTop = 75;
   const bridgeHeight = 40;
+  const riverTop = 430;
+  const riverHeight = height - riverTop;
 
-  // Bridge deck & balustrades
-  ctx.fillStyle = '#64748b';
+  // 1. Warm Picture-Book Sky (y: 0 to 75 behind bridge)
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, 80);
+  if (waterQuality === 'BLUE') {
+    skyGrad.addColorStop(0, '#bae6fd');
+    skyGrad.addColorStop(0.6, '#e0f2fe');
+    skyGrad.addColorStop(1, '#f0fdf4');
+  } else if (waterQuality === 'GREY') {
+    skyGrad.addColorStop(0, '#cbd5e1');
+    skyGrad.addColorStop(1, '#e2e8f0');
+  } else {
+    skyGrad.addColorStop(0, '#292524');
+    skyGrad.addColorStop(1, '#44403c');
+  }
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, width, bridgeTop);
+
+  // 2. Pixel Clouds in the sky
+  const cloudOffset = (timeSec * 8) % (width + 200);
+  ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(87, 83, 78, 0.45)' : 'rgba(255, 255, 255, 0.85)';
+  // Cloud 1
+  const c1x = (width - cloudOffset) % width;
+  ctx.fillRect(c1x, 15, 64, 12);
+  ctx.fillRect(c1x + 12, 8, 40, 14);
+  // Cloud 2
+  const c2x = (width * 0.65 - cloudOffset * 0.65) % width;
+  ctx.fillRect(c2x, 32, 72, 12);
+  ctx.fillRect(c2x + 16, 24, 44, 14);
+
+  // 3. Distant Green Hills & Town Silhouette behind the bridge
+  let hillFar = '#86efac';
+  let hillNear = '#4ade80';
+  if (waterQuality === 'GREY') {
+    hillFar = '#94a3b8';
+    hillNear = '#64748b';
+  } else if (waterQuality === 'BLACK') {
+    hillFar = '#57534e';
+    hillNear = '#44403c';
+  }
+  ctx.fillStyle = hillFar;
+  ctx.fillRect(0, 48, width, 28);
+  for (let i = 0; i < width; i += 45) {
+    const h = 14 + ((i * 17) % 18);
+    ctx.fillRect(i, 48 - h, 36, h);
+  }
+  ctx.fillStyle = hillNear;
+  for (let i = 15; i < width; i += 38) {
+    const h = 10 + ((i * 11) % 15);
+    ctx.fillRect(i, 56 - h, 28, h);
+  }
+
+  // 4. Under-Bridge River Embankment Wall Backdrop (y: 115 to 430)
+  // Instead of an empty black void, a warm stone-brick retaining embankment matching the video picture book!
+  const wallTop = bridgeTop + bridgeHeight;
+  const wallHeight = riverTop - wallTop;
+  const wallGrad = ctx.createLinearGradient(0, wallTop, 0, riverTop);
+  if (waterQuality === 'BLUE') {
+    wallGrad.addColorStop(0, '#f5efe6');
+    wallGrad.addColorStop(0.5, '#ece2d0');
+    wallGrad.addColorStop(1, '#ded0be');
+  } else if (waterQuality === 'GREY') {
+    wallGrad.addColorStop(0, '#e5e5e5');
+    wallGrad.addColorStop(1, '#cfcfcf');
+  } else {
+    wallGrad.addColorStop(0, '#383129');
+    wallGrad.addColorStop(1, '#231d17');
+  }
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, wallTop, width, wallHeight);
+
+  // Brick seams on embankment wall
+  ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(120, 100, 80, 0.18)';
+  for (let wy = wallTop + 24; wy < riverTop; wy += 32) {
+    ctx.fillRect(0, wy, width, 2);
+    const rowOffset = (wy % 64 === 0) ? 0 : 32;
+    for (let wx = rowOffset; wx < width; wx += 64) {
+      ctx.fillRect(wx, wy, 2, 32);
+    }
+  }
+
+  // Creeping river moss & ivy on the embankment wall
+  const mossColor = waterQuality === 'BLUE' ? '#658a52' : (waterQuality === 'GREY' ? '#6b7280' : '#44403c');
+  const mossHighlight = waterQuality === 'BLUE' ? '#8cb076' : (waterQuality === 'GREY' ? '#9ca3af' : '#57534e');
+  ctx.fillStyle = mossColor;
+  // Left wall moss cluster
+  ctx.fillRect(75, wallTop + 10, 18, 35);
+  ctx.fillRect(75, wallTop + 45, 12, 40);
+  ctx.fillRect(75, wallTop + 85, 6, 30);
+  // Right wall moss cluster
+  ctx.fillRect(width - 93, wallTop + 15, 18, 30);
+  ctx.fillRect(width - 87, wallTop + 45, 12, 35);
+  // Moss highlights
+  ctx.fillStyle = mossHighlight;
+  ctx.fillRect(80, wallTop + 16, 8, 20);
+  ctx.fillRect(width - 90, wallTop + 20, 8, 16);
+
+  // Soft water mist right above riverline
+  if (waterQuality === 'BLUE') {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.fillRect(75, riverTop - 12, width - 150, 12);
+  }
+
+  // 5. Warm Masonry Bridge (y: 75 to 115)
+  const bridgeDeckColor = waterQuality === 'BLUE' ? '#8d7b68' : (waterQuality === 'GREY' ? '#71717a' : '#44403c');
+  const bridgeStoneColor = waterQuality === 'BLUE' ? '#746453' : (waterQuality === 'GREY' ? '#52525b' : '#292524');
+  const bridgeRailColor = waterQuality === 'BLUE' ? '#4a3f35' : (waterQuality === 'GREY' ? '#3f3f46' : '#1c1917');
+
+  // Bridge deck body
+  ctx.fillStyle = bridgeDeckColor;
   ctx.fillRect(0, bridgeTop, width, bridgeHeight);
 
   // Stone brick pattern on bridge
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = bridgeStoneColor;
   for (let bx = 0; bx < width; bx += 32) {
     ctx.fillRect(bx, bridgeTop + 14, 2, bridgeHeight - 14);
     ctx.fillRect(bx + 16, bridgeTop + 26, 2, bridgeHeight - 26);
   }
 
   // Top guardrail railing
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = bridgeRailColor;
   ctx.fillRect(0, bridgeTop, width, 4);
   for (let rx = 10; rx < width; rx += 24) {
     ctx.fillRect(rx, bridgeTop, 3, 14);
   }
 
-  // Bridge underside dark shadow
-  ctx.fillStyle = '#1e293b';
+  // Bridge underside shadow
+  ctx.fillStyle = waterQuality === 'BLACK' ? '#1c1917' : '#3e342a';
   ctx.fillRect(0, bridgeTop + bridgeHeight, width, 6);
 
-  // Left Bridge Pier / Abutment
-  ctx.fillStyle = '#475569';
+  // 6. Left & Right Bridge Piers / Abutments
+  ctx.fillStyle = bridgeStoneColor;
   ctx.fillRect(0, bridgeTop, 75, height);
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = bridgeRailColor;
   ctx.fillRect(72, bridgeTop, 6, height);
-  // Bricks on left pier
-  ctx.fillStyle = '#1e293b';
   for (let py = bridgeTop + 10; py < height; py += 24) {
     ctx.fillRect(0, py, 75, 2);
   }
 
-  // Right Bridge Pier / Abutment
-  ctx.fillStyle = '#475569';
+  ctx.fillStyle = bridgeStoneColor;
   ctx.fillRect(width - 75, bridgeTop, 75, height);
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = bridgeRailColor;
   ctx.fillRect(width - 78, bridgeTop, 6, height);
   for (let py = bridgeTop + 10; py < height; py += 24) {
     ctx.fillRect(width - 75, py, 75, 2);
   }
 
-  // 5. Embedded Level Name "傷心湯" Banner on the bridge pier/scene
-  // Spec Chapter 3.3: 關卡名稱「傷心湯」需整合在遊戲背景中，不遮擋主要遊戲物件
+  // 7. Clay/Wood Level Sign "第一關 傷心湯" on left pier
   ctx.save();
-  ctx.fillStyle = '#0f172a';
+  ctx.fillStyle = '#6e4423';
   ctx.fillRect(8, bridgeTop + 16, 60, 48);
   ctx.fillStyle = '#f59e0b';
-  ctx.strokeStyle = '#78350f';
+  ctx.strokeStyle = '#4d2e16';
   ctx.lineWidth = 2;
   ctx.strokeRect(8, bridgeTop + 16, 60, 48);
 
-  ctx.fillStyle = '#fef3c7';
+  ctx.fillStyle = '#fffbeb';
   ctx.font = 'bold 11px "DotGothic16", monospace';
   ctx.textAlign = 'center';
   ctx.fillText('第一關', 38, bridgeTop + 32);
@@ -737,26 +818,26 @@ export function drawBridgeScene(
   ctx.fillText('傷心湯', 38, bridgeTop + 52);
   ctx.restore();
 
-  // 6. River Water Surface & Animated Pixel Waves
-  // River spans from y = 430 down to bottom
-  const riverTop = 430;
-  const riverHeight = height - riverTop;
-
-  let waterDark = '#0369a1';
-  let waterMid = '#0284c7';
-  let waterLight = '#38bdf8';
-  let foamColor = '#ffffff';
+  // 8. River Water Surface & Multi-Layer Waves
+  // Beautiful watercolor river tones matching the video:
+  // BLUE: fresh turquoise/teal stream
+  // GREY: murky kitchen dishwater
+  // BLACK: heavy sad soup broth
+  let waterDark = '#0f766e';
+  let waterMid = '#0d9488';
+  let waterLight = '#2dd4bf';
+  let foamColor = '#f0fdfa';
 
   if (waterQuality === 'GREY') {
     waterDark = '#44403c';
     waterMid = '#57534e';
     waterLight = '#78716c';
-    foamColor = '#d6d3d1';
+    foamColor = '#e7e5e4';
   } else if (waterQuality === 'BLACK') {
-    waterDark = '#020617';
-    waterMid = '#0f172a';
-    waterLight = '#1e293b';
-    foamColor = '#334155';
+    waterDark = '#1c1917';
+    waterMid = '#292524';
+    waterLight = '#44403c';
+    foamColor = '#57534e';
   }
 
   // Base river fill

@@ -176,13 +176,13 @@ export default function App() {
   };
 
   return (
-    <main className="w-screen h-screen flex flex-col items-center justify-center bg-slate-950 p-0 sm:p-2 md:p-4 overflow-hidden select-none">
+    <main className="w-screen h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#1a2c27] via-[#121f1c] to-[#0a1210] p-0 sm:p-2 md:p-4 overflow-hidden select-none">
       {/* Dynamically Responsive Container */}
       <div
         className={`relative w-full h-full flex items-center justify-center overflow-hidden transition-all duration-300 ${
           flowState === 'INTRO_VIDEO'
             ? 'w-full h-full bg-black'
-            : 'max-w-[1280px] max-h-[96vh] sm:aspect-[16/9] bg-black sm:rounded-2xl border-0 sm:border-4 border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.9)] crt-overlay'
+            : 'max-w-[1280px] max-h-[96vh] sm:aspect-[16/9] bg-[#e8dfd3] sm:rounded-2xl border-0 sm:border-4 border-[#44382e] shadow-[0_20px_50px_rgba(0,0,0,0.7)] crt-overlay'
         }`}
       >
         {/* Intro Cutscene State */}

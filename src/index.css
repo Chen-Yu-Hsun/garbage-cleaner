@@ -40,10 +40,10 @@
 /* Pixel border utilities */
 .pixel-box {
   box-shadow: 
-    0 -3px 0 0 #0f172a,
-    0 3px 0 0 #0f172a,
-    -3px 0 0 0 #0f172a,
-    3px 0 0 0 #0f172a;
+    0 -3px 0 0 #1b2f29,
+    0 3px 0 0 #1b2f29,
+    -3px 0 0 0 #1b2f29,
+    3px 0 0 0 #1b2f29;
 }
 
 .pixel-box-amber {
@@ -56,24 +56,24 @@
 
 .pixel-box-green {
   box-shadow: 
-    0 -3px 0 0 #15803d,
-    0 3px 0 0 #15803d,
-    -3px 0 0 0 #15803d,
-    3px 0 0 0 #15803d;
+    0 -3px 0 0 #166534,
+    0 3px 0 0 #166534,
+    -3px 0 0 0 #166534,
+    3px 0 0 0 #166534;
 }
 
-/* Custom scrollbar for retro feel */
+/* Custom scrollbar for retro picture-book feel */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #111f1b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #2b4238;
   border-radius: 0px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3d5c4f;
 }

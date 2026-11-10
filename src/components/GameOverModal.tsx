@@ -95,8 +95,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   const trashKeys: TrashType[] = ['T01', 'T02', 'T03', 'T04', 'T05', 'T06'];
 
   return (
-    <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none overflow-y-auto">
-      <div className="w-full max-w-lg bg-slate-900 border-2 border-slate-700 rounded-2xl p-6 shadow-2xl space-y-5 text-white my-auto animate-in fade-in duration-300">
+    <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none overflow-y-auto">
+      <div className="w-full max-w-lg bg-[#162722] border-2 border-[#2b4238] rounded-2xl p-6 shadow-2xl space-y-5 text-white my-auto animate-in fade-in duration-300">
         {/* Header Title */}
         <div className="text-center space-y-1">
           <div className="inline-block px-3 py-0.5 rounded bg-red-500/20 text-red-400 font-pixel text-xs border border-red-500/30">
@@ -105,26 +105,26 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <h2 className="text-2xl md:text-3xl font-black font-pixel-tc text-white tracking-wide">
             傷心湯 結算報告
           </h2>
-          <p className="text-xs font-pixel-tc text-slate-400">
-            河川污染累積達 20 點 · 感謝守護者 <span className="text-amber-400 font-bold">{nickname}</span> 的付出！
+          <p className="text-xs font-pixel-tc text-[#9bb5a8]">
+            河川污染累積達 20 點 · 感謝守護者 <span className="text-[#fbbf24] font-bold">{nickname}</span> 的付出！
           </p>
         </div>
 
         {/* Cloud Ranking Confirmation Card */}
-        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+        <div className="p-3.5 rounded-xl bg-[#0d1715] border border-[#2b4238] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
+            <Trophy className="w-5 h-5 text-[#fbbf24] shrink-0" />
             <div>
-              <div className="text-[11px] font-pixel text-slate-400">CLOUD LEADERBOARD</div>
-              <div className="text-xs font-pixel-tc text-slate-200">
+              <div className="text-[11px] font-pixel text-[#8fa89b]">CLOUD LEADERBOARD</div>
+              <div className="text-xs font-pixel-tc text-[#c9ded5]">
                 {submitting ? (
-                  <span className="text-slate-400 animate-pulse">正在將成績同步至雲端排行榜...</span>
+                  <span className="text-[#8fa89b] animate-pulse">正在將成績同步至雲端排行榜...</span>
                 ) : submitResult?.rank ? (
-                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="text-[#34d399] font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> 已驗證上傳！全球即時排名第 #{submitResult.rank} 名
                   </span>
                 ) : (
-                  <span className="text-amber-400 flex items-center gap-1">
+                  <span className="text-[#fbbf24] flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" /> {submitResult?.error || '已本機保存'}
                   </span>
                 )}
@@ -137,7 +137,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               sound.playClick();
               onOpenLeaderboard();
             }}
-            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-pixel-tc text-amber-300 transition-colors shrink-0"
+            className="px-2.5 py-1.5 rounded-lg bg-[#20342d] hover:bg-[#2b443b] text-xs font-pixel-tc text-[#fbbf24] transition-colors shrink-0 cursor-pointer shadow-sm"
           >
             查看排行
           </button>
@@ -145,31 +145,31 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
         {/* Primary Scores Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1">
-            <div className="text-[11px] font-pixel text-slate-400">TOTAL SCORE</div>
-            <div className="text-3xl font-black font-pixel text-amber-400 tabular-nums">
+          <div className="p-3.5 rounded-xl bg-[#0d1715] border border-[#2b4238] text-center space-y-1">
+            <div className="text-[11px] font-pixel text-[#8fa89b]">TOTAL SCORE</div>
+            <div className="text-3xl font-black font-pixel text-[#fbbf24] tabular-nums">
               {stats.score}
             </div>
-            <div className="text-[10px] font-pixel-tc text-slate-400">成功接取垃圾總數</div>
+            <div className="text-[10px] font-pixel-tc text-[#8fa89b]">成功接取垃圾總數</div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1">
-            <div className="text-[11px] font-pixel text-slate-400 flex items-center justify-center gap-1">
-              <Clock className="w-3 h-3 text-sky-400" />
+          <div className="p-3.5 rounded-xl bg-[#0d1715] border border-[#2b4238] text-center space-y-1">
+            <div className="text-[11px] font-pixel text-[#8fa89b] flex items-center justify-center gap-1">
+              <Clock className="w-3 h-3 text-[#38bdf8]" />
               <span>SURVIVAL</span>
             </div>
-            <div className="text-2xl font-bold font-pixel text-sky-300 tabular-nums pt-1">
+            <div className="text-2xl font-bold font-pixel text-[#38bdf8] tabular-nums pt-1">
               {formatTime(stats.survivalTime)}
             </div>
-            <div className="text-[10px] font-pixel-tc text-slate-400">有效遊戲存活時間</div>
+            <div className="text-[10px] font-pixel-tc text-[#8fa89b]">有效遊戲存活時間</div>
           </div>
         </div>
 
-        {/* Detailed 6 Trash Breakdown (AC-41: Breakdown sum must equal total) */}
+        {/* Detailed 6 Trash Breakdown */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-pixel-tc text-slate-300 px-1">
+          <div className="flex items-center justify-between text-xs font-pixel-tc text-[#c9ded5] px-1">
             <span>各類垃圾攔截統計</span>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-[#8fa89b]">
               合計：{Object.values(stats.trashBreakdown).reduce((a, b) => a + b, 0)} 個
             </span>
           </div>
@@ -181,14 +181,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               return (
                 <div
                   key={k}
-                  className="p-2 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between"
+                  className="p-2 rounded-lg bg-[#0d1715]/80 border border-[#2b4238] flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: info.color }}
                     />
-                    <span className="text-xs font-pixel-tc text-slate-300">{info.name}</span>
+                    <span className="text-xs font-pixel-tc text-[#c9ded5]">{info.name}</span>
                   </div>
                   <span className="font-pixel text-xs text-white tabular-nums">{count}</span>
                 </div>
@@ -198,15 +198,15 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </div>
 
         {/* Milestone info */}
-        <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950/50 border border-slate-800/80 text-xs font-pixel-tc text-slate-400">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#0d1715]/60 border border-[#2b4238] text-xs font-pixel-tc text-[#8fa89b]">
           <div className="flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <Sparkles className="w-3.5 h-3.5 text-[#34d399]" />
             <span>成功觸發米多力：</span>
-            <span className="font-pixel text-emerald-400 font-bold">{stats.transformCount} 次</span>
+            <span className="font-pixel text-[#34d399] font-bold">{stats.transformCount} 次</span>
           </div>
           <div>
             <span>最高連擊：</span>
-            <span className="font-pixel text-amber-400 font-bold">{stats.maxCombo} 連擊</span>
+            <span className="font-pixel text-[#fbbf24] font-bold">{stats.maxCombo} 連擊</span>
           </div>
         </div>
 
@@ -217,7 +217,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               sound.playClick();
               onPlayAgain();
             }}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold font-pixel-tc text-sm transition-all shadow-lg shadow-amber-500/20 active:translate-y-0.5 cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#10b981] hover:bg-[#059669] text-slate-950 font-bold font-pixel-tc text-sm transition-all shadow-lg shadow-[#10b981]/25 active:translate-y-0.5 cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
             <span>再次挑戰</span>
@@ -228,9 +228,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               sound.playClick();
               onOpenLeaderboard();
             }}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-pixel-tc text-sm transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#20342d] hover:bg-[#2b443b] border border-[#375247] text-[#fbbf24] font-pixel-tc text-sm transition-colors cursor-pointer"
           >
-            <Trophy className="w-4 h-4 text-amber-400" />
+            <Trophy className="w-4 h-4 text-[#fbbf24]" />
             <span>排行榜</span>
           </button>
 
@@ -239,10 +239,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               sound.playClick();
               onReturnHome();
             }}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-pixel-tc text-sm transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#20342d] hover:bg-[#2b443b] border border-[#375247] text-[#c9ded5] font-pixel-tc text-sm transition-colors cursor-pointer"
           >
-            <Home className="w-4 h-4 text-sky-400" />
-            <span>返回首頁</span>
+            <Home className="w-4 h-4" />
+            <span>回首頁</span>
           </button>
         </div>
       </div>

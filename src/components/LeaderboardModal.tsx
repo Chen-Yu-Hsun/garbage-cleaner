@@ -45,22 +45,22 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none overflow-hidden">
-      <div className="w-full max-w-2xl bg-slate-900 border-2 border-slate-700 rounded-2xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden animate-in fade-in duration-200">
+    <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none overflow-hidden">
+      <div className="w-full max-w-2xl bg-[#162722] border-2 border-[#2b4238] rounded-2xl flex flex-col max-h-[85vh] shadow-2xl overflow-hidden animate-in fade-in duration-200">
         {/* Top Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+        <div className="p-4 sm:p-5 border-b border-[#243931] flex items-center justify-between bg-[#111f1b]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-xl bg-[#b45309]/20 border border-[#f59e0b]/30 flex items-center justify-center text-[#fbbf24]">
               <Trophy className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black font-pixel-tc text-white flex items-center gap-2">
                 <span>河川守護者 · 雲端排行榜</span>
-                <span className="text-[10px] font-pixel text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+                <span className="text-[10px] font-pixel text-[#34d399] bg-[#064e3b]/80 px-2 py-0.5 rounded border border-[#059669]">
                   TOP 50
                 </span>
               </h2>
-              <p className="text-xs font-pixel-tc text-slate-400">
+              <p className="text-xs font-pixel-tc text-[#9bb5a8]">
                 依成功攔截垃圾總數排序 · 同分依存活時間決勝
               </p>
             </div>
@@ -72,7 +72,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                 sound.playClick();
                 fetchLeaderboard();
               }}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              className="p-2 rounded-lg bg-[#1c2e27] hover:bg-[#253d34] text-[#c9ded5] transition-colors cursor-pointer"
               title="重新整理"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -82,7 +82,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                 sound.playClick();
                 onClose();
               }}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              className="p-2 rounded-lg bg-[#1c2e27] hover:bg-[#253d34] text-[#c9ded5] transition-colors cursor-pointer"
               title="關閉"
             >
               <X className="w-4 h-4" />
@@ -145,8 +145,8 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                     key={item.id}
                     className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
                       isCurrentPlayer
-                        ? 'bg-amber-950/30 border-amber-500/60 shadow-md ring-1 ring-amber-500/30'
-                        : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                        ? 'bg-[#b45309]/20 border-[#f59e0b]/60 shadow-md ring-1 ring-[#f59e0b]/30'
+                        : 'bg-[#0e1916]/80 border-[#243931] hover:border-[#375247]'
                     }`}
                   >
                     {/* Rank & Nickname */}
