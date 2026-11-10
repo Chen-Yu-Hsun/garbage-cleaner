@@ -122,9 +122,9 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 pencil-card bg-[#fffdf8] flex items-center justify-center text-2xl overflow-hidden shrink-0">
             {current.step === '02' ? (
-              <MossMonsterSprite size={42} />
+              <MossMonsterSprite size={42} isCatching={true} />
             ) : current.step === '05' ? (
-              <WaterSpiritSprite size={42} />
+              <WaterSpiritSprite size={42} isCatching={true} />
             ) : (
               current.icon
             )}

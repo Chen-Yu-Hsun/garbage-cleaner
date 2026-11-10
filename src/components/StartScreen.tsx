@@ -23,6 +23,20 @@ export const StartScreen: React.FC<StartScreenProps> = ({
 }) => {
   const [isMuted, setIsMuted] = useState(sound.getMuted());
   const [errorMsg, setErrorMsg] = useState('');
+  const [monsterCatching, setMonsterCatching] = useState(false);
+  const [midoriCatching, setMidoriCatching] = useState(false);
+
+  const handleMonsterClick = () => {
+    sound.playCatchTrash();
+    setMonsterCatching(true);
+    setTimeout(() => setMonsterCatching(false), 800);
+  };
+
+  const handleMidoriClick = () => {
+    sound.playCatchRaindrop();
+    setMidoriCatching(true);
+    setTimeout(() => setMidoriCatching(false), 800);
+  };
 
   const handleStart = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,20 +141,32 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           </p>
         </div>
 
-        {/* Character Avatar Icon Colored-Pencil Preview */}
+        {/* Character Avatar Icon Colored-Pencil Preview with Interactive Exaggerated Mouth Eating */}
         <div className="flex items-center justify-center gap-5 py-1">
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-16 h-16 pencil-card bg-[#eef5e6] flex items-center justify-center overflow-hidden">
-              <MossMonsterSprite size={48} />
+          <div
+            className="flex flex-col items-center gap-1 cursor-pointer group"
+            onClick={handleMonsterClick}
+            onMouseEnter={() => setMonsterCatching(true)}
+            onMouseLeave={() => setMonsterCatching(false)}
+            title="點擊或懸停看張大嘴吃垃圾動作！"
+          >
+            <div className="w-16 h-16 pencil-card bg-[#eef5e6] flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
+              <MossMonsterSprite size={48} isCatching={monsterCatching} />
             </div>
             <span className="text-xs font-pixel-tc text-[#3d5a2b] font-bold">醜泥怪 (一般)</span>
           </div>
           <span className="pencil-hud-pill px-2.5 py-1 text-[#facc15] font-pixel text-xs">
             → 7連擊 →
           </span>
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-16 h-16 pencil-card bg-[#e6f6fa] flex items-center justify-center overflow-hidden">
-              <WaterSpiritSprite size={48} />
+          <div
+            className="flex flex-col items-center gap-1 cursor-pointer group"
+            onClick={handleMidoriClick}
+            onMouseEnter={() => setMidoriCatching(true)}
+            onMouseLeave={() => setMidoriCatching(false)}
+            title="點擊或懸停看張大嘴吸入淨化動作！"
+          >
+            <div className="w-16 h-16 pencil-card bg-[#e6f6fa] flex items-center justify-center overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
+              <WaterSpiritSprite size={48} isCatching={midoriCatching} />
             </div>
             <span className="text-xs font-pixel-tc text-[#18647d] font-bold">米多力 (無敵)</span>
           </div>

@@ -408,7 +408,7 @@ export class GameEngine {
       if (!trash.isCaught && !trash.isSplashed && isHorizHit && isVertHit) {
         // Successful Catch!
         trash.isCaught = true;
-        this.isCatchingAnim = 0.25;
+        this.isCatchingAnim = 0.35;
         this.stats.score += 1;
         this.stats.totalCatches += 1;
         this.stats.trashBreakdown[trash.type] += 1;
@@ -474,6 +474,7 @@ export class GameEngine {
         // Raindrop caught (AC-26, AC-27, AC-28):
         // Purify 1 pollution, doesn't add score or affect combo!
         rain.isCaught = true;
+        this.isCatchingAnim = 0.35;
         sound.playCatchRaindrop();
         this.spawnCatchParticles(rain.x, rain.y, '#38bdf8');
         this.decreasePollution();

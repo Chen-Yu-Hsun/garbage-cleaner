@@ -331,18 +331,158 @@ export function drawMudMonster(
     const drawX = -drawW / 2;
     const drawY = -drawH + bob;
 
+    // Nearest-neighbor / smooth colored-pencil rendering
     const prevSmooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-    // If catching, render animated mouth open
+    // Exaggerated Giant Gaping Mouth Catching / Eating Animation (張大嘴吃垃圾誇張化放大)
     if (isCatching) {
-      ctx.fillStyle = '#a32c27';
+      // 1. Cute rosy cheek blush
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.72)';
       ctx.beginPath();
-      ctx.ellipse(0, drawY + drawH * 0.45, drawW * 0.08, drawH * 0.05, 0, 0, Math.PI * 2);
+      ctx.ellipse(-drawW * 0.32, drawY + drawH * 0.38, drawW * 0.08, drawH * 0.05, 0, 0, Math.PI * 2);
+      ctx.ellipse(drawW * 0.32, drawY + drawH * 0.38, drawW * 0.08, drawH * 0.05, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#f2efdf';
-      ctx.fillRect(drawX + drawW * 0.45, drawY + drawH * 0.40, drawW * 0.1, drawH * 0.025);
+
+      // 2. Excited squinted anime cartoon eyes (> <)
+      ctx.save();
+      ctx.strokeStyle = '#1e2816';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Left eye >
+      ctx.beginPath();
+      ctx.moveTo(-drawW * 0.24, drawY + drawH * 0.27);
+      ctx.lineTo(-drawW * 0.13, drawY + drawH * 0.31);
+      ctx.lineTo(-drawW * 0.24, drawY + drawH * 0.35);
+      ctx.stroke();
+
+      // Right eye <
+      ctx.beginPath();
+      ctx.moveTo(drawW * 0.24, drawY + drawH * 0.27);
+      ctx.lineTo(drawW * 0.13, drawY + drawH * 0.31);
+      ctx.lineTo(drawW * 0.24, drawY + drawH * 0.35);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. GIANT GAPING CAVERN MOUTH (誇張放大巨嘴)
+      const mouthX = 0;
+      const mouthY = drawY + drawH * 0.52;
+      const mouthRx = drawW * 0.28; // 56% of monster width!
+      const mouthRy = drawH * 0.20; // 40% of monster height!
+
+      ctx.save();
+      ctx.fillStyle = '#3f0707';
+      ctx.strokeStyle = '#1e110a';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Clip inside mouth for tongue and fangs
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Big bouncy pink tongue
+      ctx.fillStyle = '#fb7185';
+      ctx.strokeStyle = '#e11d48';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY + mouthRy * 0.45, mouthRx * 0.72, mouthRy * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Sharp upper cartoon fangs (上排尖牙)
+      ctx.fillStyle = '#fffdf5';
+      ctx.strokeStyle = '#2c1810';
+      ctx.lineWidth = 1.0;
+      const fangsTopY = mouthY - mouthRy;
+      const fangW = mouthRx * 0.32;
+      const fangH = mouthRy * 0.65;
+
+      // Fang 1 (left)
+      ctx.beginPath();
+      ctx.moveTo(-mouthRx * 0.65, fangsTopY);
+      ctx.lineTo(-mouthRx * 0.65 + fangW * 0.5, fangsTopY + fangH);
+      ctx.lineTo(-mouthRx * 0.65 + fangW, fangsTopY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Fang 2 (center-left)
+      ctx.beginPath();
+      ctx.moveTo(-mouthRx * 0.25, fangsTopY);
+      ctx.lineTo(-mouthRx * 0.25 + fangW * 0.5, fangsTopY + fangH * 1.15);
+      ctx.lineTo(-mouthRx * 0.25 + fangW, fangsTopY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Fang 3 (center-right)
+      ctx.beginPath();
+      ctx.moveTo(mouthRx * 0.25 - fangW, fangsTopY);
+      ctx.lineTo(mouthRx * 0.25 - fangW * 0.5, fangsTopY + fangH * 1.15);
+      ctx.lineTo(mouthRx * 0.25, fangsTopY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Fang 4 (right)
+      ctx.beginPath();
+      ctx.moveTo(mouthRx * 0.65 - fangW, fangsTopY);
+      ctx.lineTo(mouthRx * 0.65 - fangW * 0.5, fangsTopY + fangH);
+      ctx.lineTo(mouthRx * 0.65, fangsTopY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Lower cute fangs (下排獠牙)
+      const fangsBotY = mouthY + mouthRy;
+      ctx.beginPath();
+      ctx.moveTo(-mouthRx * 0.35, fangsBotY);
+      ctx.lineTo(-mouthRx * 0.2, fangsBotY - fangH * 0.6);
+      ctx.lineTo(-mouthRx * 0.05, fangsBotY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(mouthRx * 0.05, fangsBotY);
+      ctx.lineTo(mouthRx * 0.2, fangsBotY - fangH * 0.6);
+      ctx.lineTo(mouthRx * 0.35, fangsBotY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore(); // restore clip
+      ctx.restore(); // restore mouth
+
+      // 4. Action Chomp Sparkles & Impact Lines (吃入垃圾衝擊線)
+      ctx.save();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-drawW * 0.48, mouthY - 4);
+      ctx.lineTo(-drawW * 0.58, mouthY - 8);
+      ctx.moveTo(-drawW * 0.46, mouthY + 5);
+      ctx.lineTo(-drawW * 0.56, mouthY + 8);
+      ctx.moveTo(drawW * 0.48, mouthY - 4);
+      ctx.lineTo(drawW * 0.58, mouthY - 8);
+      ctx.moveTo(drawW * 0.46, mouthY + 5);
+      ctx.lineTo(drawW * 0.56, mouthY + 8);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(-drawW * 0.38, drawY - 4, 3.5, 3.5);
+      ctx.fillRect(drawW * 0.38, drawY - 4, 3.5, 3.5);
+      ctx.fillRect(0, drawY - 8, 4.5, 4.5);
+      ctx.restore();
     }
     ctx.imageSmoothingEnabled = prevSmooth;
   }
@@ -490,12 +630,82 @@ export function drawMidori(
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-    // If catching, render joyful mouth glow
+    // Exaggerated Joyful Divine Water Absorption Mouth (米多力歡樂大嘴吸入淨化)
     if (isCatching) {
-      ctx.fillStyle = '#eb6536';
+      // 1. Cheek blush
+      ctx.fillStyle = 'rgba(244, 114, 182, 0.75)';
       ctx.beginPath();
-      ctx.ellipse(0, drawY + drawH * 0.51, drawW * 0.075, drawH * 0.04, 0, 0, Math.PI * 2);
+      ctx.ellipse(-drawW * 0.30, drawY + drawH * 0.44, drawW * 0.07, drawH * 0.04, 0, 0, Math.PI * 2);
+      ctx.ellipse(drawW * 0.30, drawY + drawH * 0.44, drawW * 0.07, drawH * 0.04, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      // 2. Joyful arched eyes (^ ^)
+      ctx.save();
+      ctx.strokeStyle = '#16697a';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(-drawW * 0.18, drawY + drawH * 0.38, drawW * 0.09, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(drawW * 0.18, drawY + drawH * 0.38, drawW * 0.09, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. GIANT JOYFUL MOUTH (歡樂大口吞噬淨化)
+      const mouthX = 0;
+      const mouthY = drawY + drawH * 0.54;
+      const mouthRx = drawW * 0.25; // 50% width of spirit!
+      const mouthRy = drawH * 0.16;
+
+      ctx.save();
+      ctx.fillStyle = '#b91c1c';
+      ctx.strokeStyle = '#164e63';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Clip inside mouth
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Upper cute teeth
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(mouthX - mouthRx * 0.35, mouthY - mouthRy, mouthRx * 0.7, mouthRy * 0.45);
+
+      // Pink joyful tongue
+      ctx.fillStyle = '#f472b6';
+      ctx.strokeStyle = '#db2777';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY + mouthRy * 0.4, mouthRx * 0.7, mouthRy * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore(); // restore clip
+      ctx.restore(); // restore mouth
+
+      // 4. Divine Water Suction Spirals & Sparkles
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      ctx.arc(mouthX, mouthY, mouthRx * 1.4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(mouthX, mouthY, mouthRx * 1.9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#bcebf5';
+      ctx.fillRect(-drawW * 0.45, mouthY - 10, 4, 4);
+      ctx.fillRect(drawW * 0.45, mouthY - 10, 4, 4);
+      ctx.fillRect(0, drawY - 10, 5, 5);
+      ctx.restore();
     }
     ctx.imageSmoothingEnabled = prevSmooth;
   }
