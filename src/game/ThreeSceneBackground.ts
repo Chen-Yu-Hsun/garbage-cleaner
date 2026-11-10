@@ -57,6 +57,12 @@ export class ThreeSceneBackground {
   private skyMat!: THREE.ShaderMaterial;
   private waterMat!: THREE.ShaderMaterial;
   private godRayMat!: THREE.ShaderMaterial;
+  private pencilCoatingTex: THREE.CanvasTexture | null = null;
+  private pencilLineMat = new THREE.LineBasicMaterial({
+    color: 0x382819,
+    transparent: true,
+    opacity: 0.56,
+  });
   private cloudGroups: THREE.Group[] = [];
   private foliageMaterials: THREE.MeshStandardMaterial[] = [];
   private stoneMaterials: THREE.MeshStandardMaterial[] = [];
@@ -130,6 +136,142 @@ export class ThreeSceneBackground {
   }
 
   /**
+   * Shared Colored-Pencil Coating Texture (色鉛筆手繪筆觸與畫紙肌理塗層貼圖)
+   */
+  private getPencilCoatingTexture(): THREE.CanvasTexture {
+    if (this.pencilCoatingTex) return this.pencilCoatingTex;
+
+    const c = document.createElement('canvas');
+    c.width = 256;
+    c.height = 256;
+    const ctx = c.getContext('2d')!;
+
+    // Warm white paper base (multiplies cleanly with any material.color)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 256, 256);
+
+    // Deterministic pseudo-random for consistent colored-pencil strokes
+    let s = 4099;
+    const rand = () => {
+      s = (s * 16807) % 2147483647;
+      return (s - 1) / 2147483646;
+    };
+
+    // Primary diagonal colored-pencil hatching (-34 deg)
+    ctx.lineCap = 'round';
+    for (let i = -256; i < 512; i += 4) {
+      ctx.strokeStyle = rand() > 0.35 ? 'rgba(54, 40, 26, 0.22)' : 'rgba(92, 70, 48, 0.16)';
+      ctx.lineWidth = 1.1 + rand() * 1.3;
+      for (let seg = 0; seg < 256; seg += 36) {
+        const jx = (rand() - 0.5) * 4;
+        const jy = (rand() - 0.5) * 4;
+        ctx.beginPath();
+        ctx.moveTo(i + seg * 0.8 + jx, seg + jy);
+        ctx.lineTo(i + (seg + 28) * 0.8 + jx, seg + 28 + jy);
+        ctx.stroke();
+      }
+    }
+
+    // Secondary cross-hatching strokes (+24 deg)
+    for (let i = -256; i < 512; i += 9) {
+      ctx.strokeStyle = 'rgba(64, 48, 32, 0.13)';
+      ctx.lineWidth = 1.0 + rand();
+      ctx.beginPath();
+      ctx.moveTo(i, 256);
+      ctx.lineTo(i + 160, 0);
+      ctx.stroke();
+    }
+
+    // Sketchbook paper tooth grain speckles
+    for (let g = 0; g < 900; g++) {
+      const gx = rand() * 256;
+      const gy = rand() * 256;
+      ctx.fillStyle = rand() > 0.45 ? 'rgba(50, 36, 22, 0.16)' : 'rgba(255, 253, 245, 0.38)';
+      ctx.fillRect(gx, gy, 1.6, 1.6);
+    }
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 2);
+    this.pencilCoatingTex = tex;
+    return tex;
+  }
+
+  /**
+   * Inject Colored-Pencil Coating Shader (色鉛筆輪廓描邊 + 陰影排線 + 紙張顆粒塗層) into a 3D Material
+   */
+  private applyPencilCoatingToMaterial(
+    mat: THREE.MeshStandardMaterial,
+    outlineStrength: number = 0.72
+  ): THREE.MeshStandardMaterial {
+    const coatingTex = this.getPencilCoatingTexture();
+    if (!mat.map) {
+      mat.map = coatingTex;
+    }
+    if (!mat.bumpMap) {
+      mat.bumpMap = coatingTex;
+      mat.bumpScale = 0.016;
+    }
+
+    mat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        `
+        #include <dithering_fragment>
+        vec3 cpViewDir = normalize(vViewPosition);
+        float cpNdotV = abs(dot(normalize(normal), cpViewDir));
+        float cpOutline = smoothstep(0.42, 0.14, cpNdotV);
+        float cpLum = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
+        float cpStroke1 = sin((gl_FragCoord.x * 0.92 + gl_FragCoord.y * 0.58) * 1.45);
+        float cpStroke2 = sin((gl_FragCoord.x * 0.58 - gl_FragCoord.y * 0.92) * 1.35);
+        float cpPaper = fract(sin(dot(floor(gl_FragCoord.xy * 0.75), vec2(12.9898, 78.233))) * 43758.5453);
+        float cpHatch = step(0.32, cpStroke1) * 0.085 + step(0.52, cpStroke2) * (1.0 - smoothstep(0.18, 0.78, cpLum)) * 0.11;
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * 0.74, cpHatch);
+        gl_FragColor.rgb += (cpPaper - 0.5) * 0.055;
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.20, 0.14, 0.09), cpOutline * ${outlineStrength.toFixed(2)});
+        `
+      );
+    };
+    mat.needsUpdate = true;
+    return mat;
+  }
+
+  /**
+   * Traverse a 3D Object/Group and apply Colored-Pencil Coating + optional Sketchy Edge Lines
+   */
+  private applyPencilCoatingToGroup(
+    root: THREE.Object3D,
+    addEdgeLines: boolean = false,
+    thresholdAngle: number = 28,
+    outlineStrength: number = 0.72
+  ) {
+    const meshes: THREE.Mesh[] = [];
+    root.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.material) {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const m of mats) {
+            if ((m as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
+              this.applyPencilCoatingToMaterial(m as THREE.MeshStandardMaterial, outlineStrength);
+            }
+          }
+        }
+        if (addEdgeLines) {
+          meshes.push(mesh);
+        }
+      }
+    });
+
+    for (const mesh of meshes) {
+      const edgesGeo = new THREE.EdgesGeometry(mesh.geometry, thresholdAngle);
+      const line = new THREE.LineSegments(edgesGeo, this.pencilLineMat);
+      mesh.add(line);
+    }
+  }
+
+  /**
    * Generate procedural hand-crafted stone / colored-pencil texture for 3D meshes
    */
   private createStoneTexture(baseHex: string, lineHex: string, grainHex: string): THREE.CanvasTexture {
@@ -141,10 +283,12 @@ export class ThreeSceneBackground {
     ctx.fillStyle = baseHex;
     ctx.fillRect(0, 0, 256, 256);
 
+    // Dense colored-pencil diagonal hatching & cross-hatching over stone blocks
+    ctx.lineCap = 'round';
     ctx.strokeStyle = grainHex;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.28;
-    for (let i = -256; i < 512; i += 6) {
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.42;
+    for (let i = -256; i < 512; i += 4) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
       ctx.lineTo(i + 256, 256);
@@ -152,8 +296,19 @@ export class ThreeSceneBackground {
     }
 
     ctx.strokeStyle = lineHex;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 1.1;
+    ctx.globalAlpha = 0.18;
+    for (let i = -256; i < 512; i += 8) {
+      ctx.beginPath();
+      ctx.moveTo(i, 256);
+      ctx.lineTo(i + 200, 0);
+      ctx.stroke();
+    }
+
+    // Hand-drawn ashlar masonry mortar lines
+    ctx.strokeStyle = lineHex;
+    ctx.lineWidth = 3.2;
+    ctx.globalAlpha = 0.65;
     const rows = 4;
     const rowH = 256 / rows;
     for (let r = 0; r < rows; r++) {
@@ -307,21 +462,31 @@ export class ThreeSceneBackground {
   }
 
   private buildHorizonFoliage() {
-    const foliageMatLight = new THREE.MeshStandardMaterial({
-      color: 0x4ade80,
-      roughness: 0.78,
-      metalness: 0.05,
-    });
-    const foliageMatMid = new THREE.MeshStandardMaterial({
-      color: 0x22c55e,
-      roughness: 0.82,
-      metalness: 0.05,
-    });
-    const foliageMatDark = new THREE.MeshStandardMaterial({
-      color: 0x15803d,
-      roughness: 0.85,
-      metalness: 0.05,
-    });
+    const foliageGroup = new THREE.Group();
+    const foliageMatLight = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0x4ade80,
+        roughness: 0.78,
+        metalness: 0.05,
+      }),
+      0.65
+    );
+    const foliageMatMid = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        roughness: 0.82,
+        metalness: 0.05,
+      }),
+      0.65
+    );
+    const foliageMatDark = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0x15803d,
+        roughness: 0.85,
+        metalness: 0.05,
+      }),
+      0.65
+    );
     this.foliageMaterials.push(foliageMatLight, foliageMatMid, foliageMatDark);
 
     const bushCount = 28;
@@ -338,42 +503,56 @@ export class ThreeSceneBackground {
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(bx, by, bz);
       mesh.rotation.set(i * 0.3, i * 0.5, 0);
-      this.scene.add(mesh);
+      foliageGroup.add(mesh);
     }
+    this.scene.add(foliageGroup);
   }
 
   private buildMonumentalArchesAndPiers() {
+    const archRootGroup = new THREE.Group();
     const stoneTex = this.createStoneTexture('#faeedd', '#4a2c14', '#c49f75');
     stoneTex.repeat.set(2, 2);
 
     const pierTex = this.createStoneTexture('#f5e5cf', '#3b210d', '#b88c5a');
     pierTex.repeat.set(1, 3);
 
-    const mainStoneMat = new THREE.MeshStandardMaterial({
-      color: 0xfbf2e3,
-      map: stoneTex,
-      roughness: 0.75,
-      metalness: 0.05,
-    });
+    const mainStoneMat = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0xfbf2e3,
+        map: stoneTex,
+        roughness: 0.75,
+        metalness: 0.05,
+      }),
+      0.78
+    );
 
-    const pierStoneMat = new THREE.MeshStandardMaterial({
-      color: 0xf5e5cf,
-      map: pierTex,
-      roughness: 0.72,
-      metalness: 0.06,
-    });
+    const pierStoneMat = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0xf5e5cf,
+        map: pierTex,
+        roughness: 0.72,
+        metalness: 0.06,
+      }),
+      0.78
+    );
 
-    const darkArchVaultMat = new THREE.MeshStandardMaterial({
-      color: 0x3b2614,
-      roughness: 0.9,
-      metalness: 0.02,
-    });
+    const darkArchVaultMat = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0x3b2614,
+        roughness: 0.9,
+        metalness: 0.02,
+      }),
+      0.65
+    );
 
-    const mossMat = new THREE.MeshStandardMaterial({
-      color: 0x658a3b,
-      roughness: 0.88,
-      metalness: 0.02,
-    });
+    const mossMat = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        color: 0x658a3b,
+        roughness: 0.88,
+        metalness: 0.02,
+      }),
+      0.72
+    );
 
     this.stoneMaterials.push(mainStoneMat, pierStoneMat);
     this.darkStoneMaterials.push(darkArchVaultMat);
@@ -413,24 +592,24 @@ export class ThreeSceneBackground {
       vaultGeo.rotateX(Math.PI / 2);
       const vaultMesh = new THREE.Mesh(vaultGeo, darkArchVaultMat);
       vaultMesh.position.set(arch.cx, ySpring, -vaultDepth / 2);
-      this.scene.add(vaultMesh);
+      archRootGroup.add(vaultMesh);
 
       for (const ribZ of [-0.85, -1.75, -2.65, -3.55]) {
         const ribGeo = new THREE.TorusGeometry(arch.r - 0.04, 0.07, 10, 28, Math.PI);
         const ribMesh = new THREE.Mesh(ribGeo, darkArchVaultMat);
         ribMesh.position.set(arch.cx, ySpring, ribZ);
-        this.scene.add(ribMesh);
+        archRootGroup.add(ribMesh);
       }
 
       const jambH = ySpring - riverTopY;
       const jambGeo = new THREE.BoxGeometry(0.18, jambH, vaultDepth);
       const leftJamb = new THREE.Mesh(jambGeo, darkArchVaultMat);
       leftJamb.position.set(arch.cx - arch.r + 0.05, riverTopY + jambH / 2, -vaultDepth / 2);
-      this.scene.add(leftJamb);
+      archRootGroup.add(leftJamb);
 
       const rightJamb = new THREE.Mesh(jambGeo, darkArchVaultMat);
       rightJamb.position.set(arch.cx + arch.r - 0.05, riverTopY + jambH / 2, -vaultDepth / 2);
-      this.scene.add(rightJamb);
+      archRootGroup.add(rightJamb);
 
       const numVoussoirs = 15;
       const rMid = arch.r + 0.18;
@@ -449,7 +628,7 @@ export class ThreeSceneBackground {
         const vMesh = new THREE.Mesh(vGeo, isKeystone ? mainStoneMat : pierStoneMat);
         vMesh.position.set(vx, vy, isKeystone ? 0.18 : 0.06);
         vMesh.rotation.z = th - Math.PI / 2;
-        this.scene.add(vMesh);
+        archRootGroup.add(vMesh);
       }
     }
 
@@ -459,12 +638,12 @@ export class ThreeSceneBackground {
       const spGeo = new THREE.BoxGeometry(1.65, wallTopY - ySpring, 0.38);
       const spMesh = new THREE.Mesh(spGeo, mainStoneMat);
       spMesh.position.set(sx, (wallTopY + ySpring) / 2, -0.05);
-      this.scene.add(spMesh);
+      archRootGroup.add(spMesh);
 
       const lintelGeo = new THREE.BoxGeometry(5.2, 0.32, 0.42);
       const lintelMesh = new THREE.Mesh(lintelGeo, mainStoneMat);
       lintelMesh.position.set(sx * 0.66, wallTopY - 0.14, -0.02);
-      this.scene.add(lintelMesh);
+      archRootGroup.add(lintelMesh);
     }
 
     // 4. Four Monumental Vertical 3D Stone Piers
@@ -485,29 +664,29 @@ export class ThreeSceneBackground {
         const cGeo = new THREE.BoxGeometry(cW, courseH - 0.025, 0.95);
         const cMesh = new THREE.Mesh(cGeo, pierStoneMat);
         cMesh.position.set(px, cy, 0.22);
-        this.scene.add(cMesh);
+        archRootGroup.add(cMesh);
       }
 
       const capGeo = new THREE.BoxGeometry(pierW + 0.22, 0.22, 1.18);
       const capMesh = new THREE.Mesh(capGeo, mainStoneMat);
       capMesh.position.set(px, ySpring - 0.02, 0.28);
-      this.scene.add(capMesh);
+      archRootGroup.add(capMesh);
 
       const neckGeo = new THREE.BoxGeometry(pierW + 0.12, 0.10, 1.06);
       const neckMesh = new THREE.Mesh(neckGeo, darkArchVaultMat);
       neckMesh.position.set(px, ySpring - 0.16, 0.24);
-      this.scene.add(neckMesh);
+      archRootGroup.add(neckMesh);
 
       const cutH = 0.65;
       const cutGeo = new THREE.CylinderGeometry(pierW * 0.56, pierW * 0.68, cutH, 4);
       const cutMesh = new THREE.Mesh(cutGeo, mainStoneMat);
       cutMesh.position.set(px, riverTopY + 0.16, 0.45);
-      this.scene.add(cutMesh);
+      archRootGroup.add(cutMesh);
 
       const capPyrGeo = new THREE.ConeGeometry(pierW * 0.56, 0.28, 4);
       const capPyrMesh = new THREE.Mesh(capPyrGeo, pierStoneMat);
       capPyrMesh.position.set(px, riverTopY + 0.16 + cutH / 2 + 0.14, 0.45);
-      this.scene.add(capPyrMesh);
+      archRootGroup.add(capPyrMesh);
 
       const mossCluster = new THREE.Group();
       for (let m = 0; m < 4; m++) {
@@ -521,7 +700,7 @@ export class ThreeSceneBackground {
         );
         mossCluster.add(mMesh);
       }
-      this.scene.add(mossCluster);
+      archRootGroup.add(mossCluster);
     }
 
     // 5. Left & Right 3D Trapezoidal Embankment Retaining Walls
@@ -530,38 +709,45 @@ export class ThreeSceneBackground {
     const leftWallMesh = new THREE.Mesh(sideWallGeo, pierStoneMat);
     leftWallMesh.position.set(-9.05, riverTopY + sideWallH / 2, 0.55);
     leftWallMesh.rotation.y = 0.18;
-    this.scene.add(leftWallMesh);
+    archRootGroup.add(leftWallMesh);
 
     const rightWallMesh = new THREE.Mesh(sideWallGeo, pierStoneMat);
     rightWallMesh.position.set(9.05, riverTopY + sideWallH / 2, 0.55);
     rightWallMesh.rotation.y = -0.18;
-    this.scene.add(rightWallMesh);
+    archRootGroup.add(rightWallMesh);
+
+    // Add colored-pencil coating & sketchy structural edge outlines to all arches & piers
+    this.applyPencilCoatingToGroup(archRootGroup, true, 26, 0.76);
+    this.scene.add(archRootGroup);
   }
 
   private buildBridgeDeckAndProps() {
+    const deckRootGroup = new THREE.Group();
     const bridgeMat = this.stoneMaterials[1];
     const corniceMat = this.stoneMaterials[0];
     const soffitMat = this.darkStoneMaterials[0];
 
-    const parapetGeo = new THREE.BoxGeometry(21.5, 0.54, 1.25);
+    // Rear parapet wall & coping rail positioned behind the pedestrian walkway (Z = -0.25) so pedestrians never clip
+    const parapetGeo = new THREE.BoxGeometry(21.5, 0.54, 0.42);
     const parapetMesh = new THREE.Mesh(parapetGeo, bridgeMat);
-    parapetMesh.position.set(0, 3.34, 0.35);
-    this.scene.add(parapetMesh);
+    parapetMesh.position.set(0, 3.34, -0.25);
+    deckRootGroup.add(parapetMesh);
 
-    const topRailGeo = new THREE.BoxGeometry(21.5, 0.10, 1.38);
+    const topRailGeo = new THREE.BoxGeometry(21.5, 0.10, 0.52);
     const topRailMesh = new THREE.Mesh(topRailGeo, corniceMat);
-    topRailMesh.position.set(0, 3.60, 0.42);
-    this.scene.add(topRailMesh);
+    topRailMesh.position.set(0, 3.60, -0.22);
+    deckRootGroup.add(topRailMesh);
 
-    const corniceGeo = new THREE.BoxGeometry(21.5, 0.16, 1.52);
+    // Bridge walkway deck slab & front cornice ledge (Y = 3.04 .. 3.28, Z = -0.35 .. +0.95)
+    const corniceGeo = new THREE.BoxGeometry(21.5, 0.24, 1.35);
     const corniceMesh = new THREE.Mesh(corniceGeo, corniceMat);
-    corniceMesh.position.set(0, 3.04, 0.52);
-    this.scene.add(corniceMesh);
+    corniceMesh.position.set(0, 3.12, 0.30);
+    deckRootGroup.add(corniceMesh);
 
     const soffitGeo = new THREE.BoxGeometry(21.5, 0.28, 1.15);
     const soffitMesh = new THREE.Mesh(soffitGeo, soffitMat);
     soffitMesh.position.set(0, 2.83, 0.28);
-    this.scene.add(soffitMesh);
+    deckRootGroup.add(soffitMesh);
 
     const corbelXList = [95, 175, 255, 335, 415, 495, 575, 655, 735, 815, 895];
     const corbelGeo = new THREE.BoxGeometry(0.34, 0.28, 0.45);
@@ -569,29 +755,35 @@ export class ThreeSceneBackground {
       const cxWorld = (cxPx + 9 - 480) / 50;
       const corbelMesh = new THREE.Mesh(corbelGeo, corniceMat);
       corbelMesh.position.set(cxWorld, 2.84, 0.65);
-      this.scene.add(corbelMesh);
+      deckRootGroup.add(corbelMesh);
     }
 
     const signTex = this.createSignTexture();
-    const signMat = new THREE.MeshStandardMaterial({
-      map: signTex,
-      roughness: 0.65,
-      metalness: 0.08,
-    });
+    const signMat = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({
+        map: signTex,
+        roughness: 0.65,
+        metalness: 0.08,
+      }),
+      0.72
+    );
     const signGeo = new THREE.BoxGeometry(1.08, 0.72, 0.12);
     this.signMesh = new THREE.Mesh(signGeo, signMat);
     this.signMesh.position.set((32 - 480) / 50, (270 - 126) / 50, 1.38);
-    this.scene.add(this.signMesh);
+    deckRootGroup.add(this.signMesh);
 
-    const chainMat = new THREE.MeshStandardMaterial({ color: 0x29180b, metalness: 0.6, roughness: 0.4 });
+    const chainMat = this.applyPencilCoatingToMaterial(
+      new THREE.MeshStandardMaterial({ color: 0x29180b, metalness: 0.6, roughness: 0.4 }),
+      0.65
+    );
     const chainGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.35, 6);
     const chainL = new THREE.Mesh(chainGeo, chainMat);
     chainL.position.set((18 - 480) / 50, (270 - 102) / 50, 1.38);
-    this.scene.add(chainL);
+    deckRootGroup.add(chainL);
 
     const chainR = new THREE.Mesh(chainGeo, chainMat);
     chainR.position.set((46 - 480) / 50, (270 - 102) / 50, 1.38);
-    this.scene.add(chainR);
+    deckRootGroup.add(chainR);
 
     const create3DBin = (xPx: number, bodyHex: number, lidHex: number) => {
       const group = new THREE.Group();
@@ -606,12 +798,16 @@ export class ThreeSceneBackground {
       lid.position.y = 0.28;
       group.add(lid);
 
-      group.position.set((xPx + 8 - 480) / 50, 3.74, 0.45);
-      this.scene.add(group);
+      // Place bins along the rear parapet wall so pedestrians walk in front without clipping
+      group.position.set((xPx + 8 - 480) / 50, 3.62, -0.10);
+      deckRootGroup.add(group);
     };
 
     create3DBin(180, 0x0284c7, 0x0369a1);
     create3DBin(740, 0x16a34a, 0x14532d);
+
+    this.applyPencilCoatingToGroup(deckRootGroup, true, 26, 0.76);
+    this.scene.add(deckRootGroup);
   }
 
   /* ============================================================================
@@ -1121,21 +1317,32 @@ export class ThreeSceneBackground {
   }
 
   private createPedestrian3DRig(p: Pedestrian): Pedestrian3DRig {
+    let rig: Pedestrian3DRig;
     switch (p.type) {
       case 'dog':
-        return this.createDog3D(p);
+        rig = this.createDog3D(p);
+        break;
       case 'cart':
-        return this.createVendorAndCart3D(p);
+        rig = this.createVendorAndCart3D(p);
+        break;
       case 'child':
-        return this.createHumanoid3D(p, 0.76, p.color, '#2563eb', '#ef4444', '#451a03', 'child');
+        rig = this.createHumanoid3D(p, 0.76, p.color, '#2563eb', '#ef4444', '#451a03', 'child');
+        break;
       case 'elder':
-        return this.createHumanoid3D(p, 0.94, '#78716c', '#44403c', '#292524', '#e7e5e4', 'elder');
+        rig = this.createHumanoid3D(p, 0.94, '#78716c', '#44403c', '#292524', '#e7e5e4', 'elder');
+        break;
       case 'teen':
-        return this.createHumanoid3D(p, 0.96, p.color, '#334155', '#f8fafc', '#ca8a04', 'teen');
+        rig = this.createHumanoid3D(p, 0.96, p.color, '#334155', '#f8fafc', '#ca8a04', 'teen');
+        break;
       case 'adult':
       default:
-        return this.createHumanoid3D(p, 1.0, p.color, '#1e293b', '#451a03', '#292018', 'adult');
+        rig = this.createHumanoid3D(p, 1.0, p.color, '#1e293b', '#451a03', '#292018', 'adult');
+        break;
     }
+
+    // Apply Colored-Pencil Coating (色鉛筆手繪塗層 + 輪廓描邊) to all 3D pedestrian characters & props
+    this.applyPencilCoatingToGroup(rig.root, p.type === 'cart', 30, 0.78);
+    return rig;
   }
 
   private syncPedestrians3D(pedestrians: Pedestrian[], timeSec: number) {
@@ -1152,14 +1359,14 @@ export class ThreeSceneBackground {
         this.scene.add(rig.root);
       }
 
-      // Convert pixel coordinates (p.x, p.y = 104) to 3D Bridge Walkway coordinates
-      const worldX = (p.x - 480) / 50;
-      const worldY = (270 - p.y) / 50;
-      // Stagger Z slightly per pedestrian so they pass each other smoothly in 3D without z-fighting
-      const worldZ = 0.42 + (i % 3) * 0.08;
+      // Dedicated non-overlapping Z lane per pedestrian in front of the rear parapet wall
+      const worldZ = 0.25 + i * 0.11;
+      const persp = (18 - worldZ) / 18;
+      const worldX = this.camera.position.x * (1 - persp) + ((p.x - 480) / 50) * persp;
+      const worldY = ((270 - p.y) / 50) * persp;
 
       rig.root.position.set(worldX, worldY, worldZ);
-      rig.root.scale.x = p.direction;
+      rig.root.scale.set(p.direction * persp, persp, persp);
 
       // Animate 3D Articulated Limbs & Gait
       const phase = p.walkFrame * 7.5;
@@ -1213,124 +1420,137 @@ export class ThreeSceneBackground {
   }
 
   /* ============================================================================
-   * 3D FALLING TRASH, RAINDROPS & FLOATING RIVER TRASH (掉落物 3D 元件)
+   * 3D FALLING TRASH, RAINDROPS & FLOATING RIVER TRASH (掉落物 3D 元件 - 無穿模設計)
    * ============================================================================ */
 
   private createTrash3DGroup(type: TrashType): THREE.Group {
     const group = new THREE.Group();
 
     switch (type) {
-      // T01: 3D Cigarette Butt (菸蒂)
+      // T01: 3D Cigarette Butt (菸蒂 - 分段無重疊幾何防穿模)
       case 'T01': {
-        const paperGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.36, 12);
+        const paperGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.30, 14);
         const paperMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7 });
         const paper = new THREE.Mesh(paperGeo, paperMat);
-        paper.position.y = 0.08;
+        paper.position.y = 0.07; // spans -0.08 .. +0.22
         group.add(paper);
 
-        const filterGeo = new THREE.CylinderGeometry(0.092, 0.092, 0.20, 12);
+        const filterGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.20, 14);
         const filterMat = new THREE.MeshStandardMaterial({ color: 0xd9822b, roughness: 0.6 });
         const filter = new THREE.Mesh(filterGeo, filterMat);
-        filter.position.y = -0.18;
+        filter.position.y = -0.185; // spans -0.285 .. -0.085 (clean gap)
         group.add(filter);
 
-        const emberGeo = new THREE.SphereGeometry(0.088, 10, 10);
+        const emberGeo = new THREE.CylinderGeometry(0.085, 0.09, 0.06, 14);
         const emberMat = new THREE.MeshStandardMaterial({
           color: 0xdc2626,
           emissive: 0xef4444,
-          emissiveIntensity: 0.7,
+          emissiveIntensity: 0.65,
         });
         const ember = new THREE.Mesh(emberGeo, emberMat);
-        ember.position.y = 0.26;
+        ember.position.y = 0.255; // spans +0.225 .. +0.285
         group.add(ember);
         break;
       }
 
-      // T02: 3D Translucent PET Bottle (寶特瓶)
+      // T02: 3D PET Bottle (寶特瓶 - 不透明色鉛筆質感與獨立高度分段徹底消除穿模)
       case 'T02': {
         const bottleMat = new THREE.MeshStandardMaterial({
           color: 0x7dd3fc,
-          transparent: true,
-          opacity: 0.85,
-          roughness: 0.15,
-          metalness: 0.1,
+          roughness: 0.28,
+          metalness: 0.08,
         });
-        const bodyGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.42, 16);
+        const bodyGeo = new THREE.CylinderGeometry(0.155, 0.155, 0.36, 16);
         const body = new THREE.Mesh(bodyGeo, bottleMat);
-        body.position.y = -0.06;
+        body.position.y = -0.08; // spans -0.26 .. +0.10
         group.add(body);
 
-        const neckGeo = new THREE.ConeGeometry(0.16, 0.16, 16);
+        const neckGeo = new THREE.CylinderGeometry(0.062, 0.155, 0.16, 16);
         const neck = new THREE.Mesh(neckGeo, bottleMat);
-        neck.position.y = 0.22;
+        neck.position.y = 0.185; // spans +0.105 .. +0.265
         group.add(neck);
 
-        const labelGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.14, 16);
-        const labelMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+        const labelGeo = new THREE.CylinderGeometry(0.164, 0.164, 0.14, 16);
+        const labelMat = new THREE.MeshStandardMaterial({
+          color: 0x0284c7,
+          roughness: 0.45,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+        });
         const label = new THREE.Mesh(labelGeo, labelMat);
-        label.position.y = -0.04;
+        label.position.y = -0.06;
         group.add(label);
 
-        const capGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.08, 12);
-        const capMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.3 });
+        const capGeo = new THREE.CylinderGeometry(0.068, 0.068, 0.08, 12);
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.35 });
         const cap = new THREE.Mesh(capGeo, capMat);
-        cap.position.y = 0.31;
+        cap.position.y = 0.31; // spans +0.27 .. +0.35
         group.add(cap);
         break;
       }
 
-      // T03: 3D Metallic Aluminum Beverage Can (飲料罐)
+      // T03: 3D Beverage Can (飲料罐 - 無重疊金屬邊環與標籤防穿模)
       case 'T03': {
-        const canGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.46, 18);
+        const canGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.40, 18);
         const canMat = new THREE.MeshStandardMaterial({
           color: 0xdc2626,
-          metalness: 0.55,
-          roughness: 0.28,
+          metalness: 0.45,
+          roughness: 0.35,
         });
         const can = new THREE.Mesh(canGeo, canMat);
-        group.add(can);
+        group.add(can); // spans -0.20 .. +0.20
 
-        const stripeGeo = new THREE.CylinderGeometry(0.174, 0.174, 0.14, 18);
-        const stripeMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.4 });
+        const stripeGeo = new THREE.CylinderGeometry(0.173, 0.173, 0.14, 18);
+        const stripeMat = new THREE.MeshStandardMaterial({
+          color: 0xfef3c7,
+          roughness: 0.45,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+        });
         const stripe = new THREE.Mesh(stripeGeo, stripeMat);
         group.add(stripe);
 
-        const rimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.2 });
-        const rimTopGeo = new THREE.CylinderGeometry(0.155, 0.17, 0.04, 18);
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.75, roughness: 0.25 });
+        const rimTopGeo = new THREE.CylinderGeometry(0.15, 0.165, 0.04, 18);
         const rimTop = new THREE.Mesh(rimTopGeo, rimMat);
-        rimTop.position.y = 0.24;
+        rimTop.position.y = 0.225; // spans +0.205 .. +0.245
         group.add(rimTop);
 
-        const rimBot = new THREE.Mesh(rimTopGeo, rimMat);
-        rimBot.position.y = -0.24;
+        const rimBotGeo = new THREE.CylinderGeometry(0.165, 0.15, 0.04, 18);
+        const rimBot = new THREE.Mesh(rimBotGeo, rimMat);
+        rimBot.position.y = -0.225; // spans -0.245 .. -0.205
         group.add(rimBot);
         break;
       }
 
-      // T04: 3D Foil Juice Carton with Straw (鋁箔飲料盒)
+      // T04: 3D Foil Juice Carton with Straw (鋁箔飲料盒 - 外部浮雕與吸管零穿模)
       case 'T04': {
-        const boxGeo = new THREE.BoxGeometry(0.32, 0.46, 0.22);
-        const boxMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.45 });
+        const boxGeo = new THREE.BoxGeometry(0.32, 0.44, 0.22);
+        const boxMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.48 });
         const box = new THREE.Mesh(boxGeo, boxMat);
-        box.position.y = -0.04;
+        box.position.y = -0.04; // spans Y: -0.26 .. +0.18, Z: -0.11 .. +0.11
         group.add(box);
 
-        // Fruit emblem sphere
-        const fruitGeo = new THREE.SphereGeometry(0.09, 12, 10);
-        fruitGeo.scale(1, 1, 0.3);
+        // Fruit emblem disc placed cleanly outside front & back faces (Z = ±0.118)
+        const fruitGeo = new THREE.CylinderGeometry(0.085, 0.085, 0.016, 14);
+        fruitGeo.rotateX(Math.PI / 2);
         const fruitMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 });
-        const fruit = new THREE.Mesh(fruitGeo, fruitMat);
-        fruit.position.set(0, -0.04, 0.10);
-        group.add(fruit);
+        const fruitFront = new THREE.Mesh(fruitGeo, fruitMat);
+        fruitFront.position.set(0, -0.04, 0.12);
+        group.add(fruitFront);
 
-        // 3D Bent Drinking Straw
-        const strawMat = new THREE.MeshStandardMaterial({ color: 0xfef2f2, roughness: 0.3 });
-        const straw1 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.18, 8), strawMat);
-        straw1.position.set(-0.05, 0.24, 0);
+        const fruitBack = new THREE.Mesh(fruitGeo, fruitMat);
+        fruitBack.position.set(0, -0.04, -0.12);
+        group.add(fruitBack);
+
+        // 3D Bent Drinking Straw starting cleanly above box top (Y = +0.18)
+        const strawMat = new THREE.MeshStandardMaterial({ color: 0xfef2f2, roughness: 0.35 });
+        const straw1 = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.15, 8), strawMat);
+        straw1.position.set(-0.05, 0.255, 0);
         group.add(straw1);
 
-        const straw2 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), strawMat);
-        straw2.position.set(0.0, 0.33, 0);
+        const straw2 = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.11, 8), strawMat);
+        straw2.position.set(0.0, 0.34, 0);
         straw2.rotation.z = -1.1;
         group.add(straw2);
         break;
@@ -1340,28 +1560,28 @@ export class ThreeSceneBackground {
       case 'T05': {
         const sackMat = new THREE.MeshStandardMaterial({
           color: 0xc27832,
-          roughness: 0.55,
+          roughness: 0.58,
           metalness: 0.05,
         });
-        const sackGeo = new THREE.SphereGeometry(0.22, 16, 14);
-        sackGeo.scale(1.05, 0.92, 0.95);
+        const sackGeo = new THREE.SphereGeometry(0.21, 16, 14);
+        sackGeo.scale(1.05, 0.88, 0.95);
         const sack = new THREE.Mesh(sackGeo, sackMat);
-        sack.position.y = -0.08;
+        sack.position.y = -0.09; // top at +0.095
         group.add(sack);
 
         // Tied cord knot ring
-        const tieGeo = new THREE.TorusGeometry(0.08, 0.024, 8, 14);
+        const tieGeo = new THREE.TorusGeometry(0.078, 0.024, 8, 14);
         tieGeo.rotateX(Math.PI / 2);
         const tieMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.7 });
         const tie = new THREE.Mesh(tieGeo, tieMat);
-        tie.position.y = 0.11;
+        tie.position.y = 0.115;
         group.add(tie);
 
         // Flared ruffled top ears
-        const earGeo = new THREE.ConeGeometry(0.14, 0.18, 7);
+        const earGeo = new THREE.ConeGeometry(0.13, 0.15, 7);
         earGeo.rotateX(Math.PI);
         const ear = new THREE.Mesh(earGeo, sackMat);
-        ear.position.y = 0.20;
+        ear.position.y = 0.21;
         group.add(ear);
         break;
       }
@@ -1371,26 +1591,28 @@ export class ThreeSceneBackground {
       default: {
         const poopMat = new THREE.MeshStandardMaterial({
           color: 0x783f12,
-          roughness: 0.35,
-          metalness: 0.08,
+          roughness: 0.42,
+          metalness: 0.06,
         });
-        const coil1 = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.075, 10, 18), poopMat);
+        const coil1 = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.068, 10, 18), poopMat);
         coil1.rotation.x = Math.PI / 2;
         coil1.position.y = -0.14;
         group.add(coil1);
 
-        const coil2 = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.065, 10, 18), poopMat);
+        const coil2 = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.058, 10, 18), poopMat);
         coil2.rotation.x = Math.PI / 2;
         coil2.position.y = -0.02;
         group.add(coil2);
 
-        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.18, 12), poopMat);
-        tip.position.y = 0.13;
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.085, 0.16, 12), poopMat);
+        tip.position.y = 0.12;
         group.add(tip);
         break;
       }
     }
 
+    // Apply colored-pencil coating to 3D trash items for unified visual style
+    this.applyPencilCoatingToGroup(group, false, 30, 0.75);
     return group;
   }
 
@@ -1400,32 +1622,24 @@ export class ThreeSceneBackground {
     const dropMat = new THREE.MeshStandardMaterial({
       color: 0x38bdf8,
       emissive: 0x0284c7,
-      emissiveIntensity: 0.45,
-      roughness: 0.08,
-      metalness: 0.15,
-      transparent: true,
-      opacity: 0.92,
+      emissiveIntensity: 0.42,
+      roughness: 0.12,
+      metalness: 0.12,
     });
 
-    // Bottom droplet bulb
-    const bulbGeo = new THREE.SphereGeometry(0.16, 18, 16);
+    // Bottom droplet hemisphere bulb
+    const bulbGeo = new THREE.SphereGeometry(0.155, 18, 16, 0, Math.PI * 2, Math.PI * 0.48, Math.PI * 0.52);
     const bulb = new THREE.Mesh(bulbGeo, dropMat);
-    bulb.position.y = -0.06;
+    bulb.position.y = -0.05;
     group.add(bulb);
 
-    // Tapered droplet top cone
-    const coneGeo = new THREE.ConeGeometry(0.16, 0.28, 18);
+    // Tapered droplet top cone (joins seamlessly at bulb equator without internal overlapping faces)
+    const coneGeo = new THREE.ConeGeometry(0.155, 0.28, 18, 1, true);
     const cone = new THREE.Mesh(coneGeo, dropMat);
-    cone.position.y = 0.08;
+    cone.position.y = 0.09;
     group.add(cone);
 
-    // Bright inner core highlight
-    const coreGeo = new THREE.SphereGeometry(0.07, 10, 10);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
-    const core = new THREE.Mesh(coreGeo, coreMat);
-    core.position.set(-0.04, -0.04, 0.08);
-    group.add(core);
-
+    this.applyPencilCoatingToGroup(group, false, 30, 0.65);
     return group;
   }
 
@@ -1444,9 +1658,16 @@ export class ThreeSceneBackground {
         this.scene.add(meshGroup);
       }
 
-      const wx = (t.x - 480) / 50;
-      const wy = (270 - t.y) / 50;
-      meshGroup.position.set(wx, wy, 0.30);
+      // Place falling trash on foreground plane (Z = 2.40..2.60) strictly in front of
+      // all bridge piers, arches, corbels, and tilted water plane to prevent any clipping,
+      // while perspective-compensating (wx, wy, scale) for 1:1 hitbox alignment!
+      const zFg = 2.40 + (i % 5) * 0.045;
+      const persp = (18 - zFg) / 18;
+      const wx = this.camera.position.x * (1 - persp) + ((t.x - 480) / 50) * persp;
+      const wy = ((270 - t.y) / 50) * persp;
+
+      meshGroup.position.set(wx, wy, zFg);
+      meshGroup.scale.setScalar(persp);
 
       // Dynamic 3-axis 3D tumbling while falling
       meshGroup.rotation.z = -t.rotation;
@@ -1477,12 +1698,15 @@ export class ThreeSceneBackground {
         this.scene.add(meshGroup);
       }
 
-      const wx = (r.x - 480) / 50;
-      const wy = (270 - r.y) / 50;
-      meshGroup.position.set(wx, wy, 0.32);
+      const zFg = 2.65 + (i % 4) * 0.04;
+      const persp = (18 - zFg) / 18;
+      const wx = this.camera.position.x * (1 - persp) + ((r.x - 480) / 50) * persp;
+      const wy = ((270 - r.y) / 50) * persp;
+
+      meshGroup.position.set(wx, wy, zFg);
       meshGroup.rotation.y = timeSec * 3.5 + i;
       const pulse = 1 + Math.sin(timeSec * 8 + i) * 0.08;
-      meshGroup.scale.setScalar(pulse);
+      meshGroup.scale.setScalar(pulse * persp);
     }
 
     for (const [id, meshGroup] of this.raindropMeshes.entries()) {
@@ -1503,15 +1727,20 @@ export class ThreeSceneBackground {
       let meshGroup = this.riverTrashMeshes.get(vt.id);
       if (!meshGroup) {
         meshGroup = this.createTrash3DGroup(vt.type);
-        meshGroup.scale.setScalar(0.82);
         this.riverTrashMeshes.set(vt.id, meshGroup);
         this.scene.add(meshGroup);
       }
 
+      // Place floating river trash at Z = 3.45..3.65 above the tilted 3D water plane
+      // with exact perspective compensation so waves never clip over floating items
       const bob = Math.sin(timeSec * vt.bobSpeed + vt.bobOffset) * 3.5;
-      const wx = (vt.x - 480) / 50;
-      const wy = (270 - (vt.y + bob)) / 50;
-      meshGroup.position.set(wx, wy, 0.75);
+      const zFloat = 3.45 + (i % 5) * 0.045;
+      const persp = (18 - zFloat) / 18;
+      const wx = this.camera.position.x * (1 - persp) + ((vt.x - 480) / 50) * persp;
+      const wy = ((270 - (vt.y + bob)) / 50) * persp;
+
+      meshGroup.position.set(wx, wy, zFloat);
+      meshGroup.scale.setScalar(0.84 * persp);
 
       // Bobbing and pitching with the 3D river waves
       meshGroup.rotation.z = -vt.rotation + Math.sin(timeSec * 2.5 + vt.bobOffset) * 0.22;
@@ -1554,21 +1783,22 @@ export class ThreeSceneBackground {
           vUv = uv;
           vec3 pos = position;
 
-          float w1 = sin(pos.x * 1.15 + uTime * 2.3) * 0.11;
-          float w2 = cos(pos.y * 1.85 - uTime * 1.7 + pos.x * 0.55) * 0.08;
-          float w3 = sin((pos.x * 1.9 + pos.y * 2.2) + uTime * 3.2) * 0.045;
-          float w4 = cos(pos.x * 4.2 - uTime * 4.0) * 0.022;
+          // Pure horizontal & depth river waves without diagonal cross-stripes
+          float w1 = sin(pos.x * 1.10 + uTime * 2.1) * 0.10;
+          float w2 = cos(pos.y * 1.95 - uTime * 1.6) * 0.075;
+          float w3 = sin(pos.x * 2.6 - uTime * 2.8) * 0.035;
+          float w4 = cos(pos.y * 3.8 + uTime * 3.2) * 0.020;
 
-          float fgFactor = mix(0.25, 1.35, 1.0 - uv.y);
+          float fgFactor = mix(0.25, 1.30, 1.0 - uv.y);
           float elev = (w1 + w2 + w3 + w4) * fgFactor;
 
           pos.y += elev;
           vElevation = elev;
 
           vec3 n = normalize(vec3(
-            -cos(pos.x * 1.15 + uTime * 2.3) * 0.25,
+            -cos(pos.x * 1.10 + uTime * 2.1) * 0.22,
             1.0,
-            -sin(pos.y * 1.85 - uTime * 1.7) * 0.20
+            -sin(pos.y * 1.95 - uTime * 1.6) * 0.18
           ));
           vNormalVec = n;
 
@@ -1616,16 +1846,11 @@ export class ThreeSceneBackground {
           float shoreLine = exp(-pow((vUv.y - 0.62) * 28.0 + sin(vWorldPos.x * 2.5 + uTime * 3.0) * 0.6, 2.0));
           waterCol = mix(waterCol, uFoamColor, clamp(isFoam * 0.85 + shoreLine * 0.65, 0.0, 0.92));
 
-          float hatch = mod(gl_FragCoord.x * 0.65 - gl_FragCoord.y * 0.35, 4.0);
-          if (hatch < 1.2) {
-            waterCol -= vec3(0.045);
-          }
-
           float tunnelShadow = smoothstep(0.62, 0.85, vUv.y);
           waterCol = mix(waterCol, uDeepColor * 0.32, tunnelShadow);
 
           if (uWaterQuality > 1.5) {
-            float oil = sin(vWorldPos.x * 1.8 + vUv.y * 12.0 + uTime * 2.5) * 0.14;
+            float oil = sin(vWorldPos.x * 1.8 + uTime * 2.5) * cos(vUv.y * 10.0) * 0.14;
             waterCol += vec3(oil * 0.35, -oil * 0.1, oil * 0.45);
           }
 
@@ -1640,48 +1865,17 @@ export class ThreeSceneBackground {
   }
 
   private buildVolumetricGodRays() {
+    // Keep shader reference for waterQuality uniform updates without adding diagonal ray planes over water
     this.godRayMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
       uniforms: {
         uTime: { value: 0 },
         uIntensity: { value: 1.0 },
       },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float uTime;
-        uniform float uIntensity;
-        varying vec2 vUv;
-        void main() {
-          float edgeFade = sin(vUv.x * 3.14159);
-          float vertFade = smoothstep(0.0, 0.85, vUv.y);
-          float shimmer = 0.85 + 0.15 * sin(uTime * 2.0 + vUv.x * 6.0);
-          float alpha = edgeFade * vertFade * 0.11 * shimmer * uIntensity;
-          gl_FragColor = vec4(1.0, 0.97, 0.82, alpha);
-        }
-      `,
+      vertexShader: `void main() { gl_Position = vec4(0.0); }`,
+      fragmentShader: `void main() { gl_FragColor = vec4(0.0); }`,
     });
-
-    const rayConfigs = [
-      { x: -4.6, y: -0.2, w: 1.8, h: 6.2 },
-      { x: 0.3, y: -0.2, w: 2.3, h: 6.2 },
-      { x: 5.2, y: -0.2, w: 1.9, h: 6.2 },
-    ];
-
-    for (const rc of rayConfigs) {
-      const geo = new THREE.PlaneGeometry(rc.w, rc.h);
-      const mesh = new THREE.Mesh(geo, this.godRayMat);
-      mesh.position.set(rc.x, rc.y, 0.9);
-      mesh.rotation.z = -0.22;
-      this.scene.add(mesh);
-    }
   }
 
   private applyWaterQualityPalette(waterQuality: WaterQuality) {

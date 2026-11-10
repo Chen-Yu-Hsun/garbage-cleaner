@@ -45,7 +45,8 @@ export class GameEngine {
 
   // Player State
   public playerX = 480;
-  public playerSpeed = 380; // px/s
+  public readonly BASE_PLAYER_SPEED = 380; // px/s at initial trash fall speed
+  public playerSpeed = 380; // px/s (scales proportionally with trash fall speed)
   public moveLeft = false;
   public moveRight = false;
   public facingRight = false; // Mirror sprite horizontally when moving right
@@ -114,18 +115,26 @@ export class GameEngine {
     this.scheduleNextRaindrop();
   }
 
-  // Calculate current trash fall speed (duration based on effective survival time)
+  // Calculate uncapped staged speed multiplier (increases every 30s with no upper limit)
+  public getTrashSpeedMultiplier(): number {
+    const stage = Math.floor(this.effectiveGameTime / 30);
+    if (stage <= 0) return 1.0;        // 0-30s: 5.0s fall duration (1.00x)
+    if (stage === 1) return 5.0 / 4.0; // 30-60s: 4.0s fall duration (1.25x)
+    if (stage === 2) return 5.0 / 3.0; // 60-90s: 3.0s fall duration (1.67x)
+    // 90s+ (stage >= 3): 2.0s fall duration (2.5x) at 90s, +1.0x every 30s stage thereafter with NO cap!
+    return 2.5 + (stage - 3) * 1.0;
+  }
+
+  // Calculate current trash fall speed (uncapped staged acceleration)
   private getTrashFallSpeed(): number {
-    const fallDistance = this.RIVER_Y - this.BRIDGE_DROP_Y; // 315px
-    let durationSec = 5.0;
-    if (this.effectiveGameTime >= 90) {
-      durationSec = 2.0;
-    } else if (this.effectiveGameTime >= 60) {
-      durationSec = 3.0;
-    } else if (this.effectiveGameTime >= 30) {
-      durationSec = 4.0;
-    }
-    return fallDistance / durationSec;
+    const fallDistance = this.RIVER_Y - this.BRIDGE_DROP_Y;
+    const baseFallSpeed = fallDistance / 5.0;
+    return baseFallSpeed * this.getTrashSpeedMultiplier();
+  }
+
+  // Calculate player speed directly proportional to current trash fall speed
+  private getPlayerSpeed(): number {
+    return this.BASE_PLAYER_SPEED * this.getTrashSpeedMultiplier();
   }
 
   // Get trash spawn interval (normal: 1.5s, Midori invincible: 0.75s)
@@ -191,6 +200,7 @@ export class GameEngine {
 
   public reset() {
     this.playerX = 480;
+    this.playerSpeed = this.BASE_PLAYER_SPEED;
     this.moveLeft = false;
     this.moveRight = false;
     this.facingRight = false;
@@ -323,9 +333,9 @@ export class GameEngine {
     if (this.characterMode === 'TRANSFORMING') {
       this.transformTimer -= delta;
       if (this.transformTimer <= 0) {
-        // Switch to Phase 2: Midori Invincible (2.0s)
+        // Switch to Phase 2: Midori Invincible (3.0s)
         this.characterMode = 'MIDORI_INVINCIBLE';
-        this.transformTimer = 2.0;
+        this.transformTimer = 3.0;
         sound.startMidoriLayer();
         this.addFloatingText('米多力無敵！', this.playerX, this.RIVER_Y - 90, '#34d399', 18);
       }
@@ -333,7 +343,7 @@ export class GameEngine {
       return;
     }
 
-    // 2. Check Midori Invincible Phase 2: 2.0s
+    // 2. Check Midori Invincible Phase 2: 3.0s
     if (this.characterMode === 'MIDORI_INVINCIBLE') {
       this.transformTimer -= delta;
       if (this.transformTimer <= 0) {
@@ -347,6 +357,10 @@ export class GameEngine {
     // Effective game time advances
     this.effectiveGameTime += delta;
     this.stats.survivalTime = this.effectiveGameTime;
+
+    // Keep player movement speed directly proportional to current trash fall speed
+    const currentTrashSpeed = this.getTrashFallSpeed();
+    this.playerSpeed = this.getPlayerSpeed();
 
     // 3. Player Movement (Desktop + Touch Drag)
     let moveDir = 0;
@@ -410,6 +424,7 @@ export class GameEngine {
 
     for (let i = this.trashList.length - 1; i >= 0; i--) {
       const trash = this.trashList[i];
+      trash.speedY = currentTrashSpeed;
       trash.y += trash.speedY * delta;
       trash.rotation += trash.rotationSpeed * delta;
 
