@@ -45,8 +45,8 @@ export class GameEngine {
 
   // Player State
   public playerX = 480;
-  public readonly BASE_PLAYER_SPEED = 380; // px/s at initial trash fall speed
-  public playerSpeed = 380; // px/s (scales proportionally with trash fall speed)
+  public readonly BASE_PLAYER_SPEED = 380 * 0.7; // 266 px/s (overall player speed multiplied by 0.7)
+  public playerSpeed = 380 * 0.7; // px/s (scales proportionally with trash fall speed)
   public moveLeft = false;
   public moveRight = false;
   public facingRight = false; // Mirror sprite horizontally when moving right
