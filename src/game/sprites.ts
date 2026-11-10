@@ -18,6 +18,89 @@ export function pixelRect(
   ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
 }
 
+const MOSS_PALETTE: Record<string, string> = {
+  ".": "transparent",
+  "O": "#1e2816",
+  "D": "#2c3b20",
+  "M": "#445931",
+  "G": "#5a7341",
+  "L": "#718c54",
+  "H": "#87a368",
+  "B": "#31261a",
+  "W": "#f2efdf",
+  "S": "#c4c2b0",
+  "P": "#211915",
+  "R": "#691b18",
+  "T": "#a32c27"
+};
+
+const MOSS_SPRITE_DATA = [
+  "................................",
+  "................................",
+  "............OOOOOOOO............",
+  "..........OODGGGGGGDOO..........",
+  "........OODGGHHHHHHGGDOO........",
+  ".......ODGGHHHHHHHHHHGGDO.......",
+  "......ODGHHHHLLLLLLHHHHGDO......",
+  "......ODGHHHLLLLLLLLHHHGDO......",
+  ".....ODGGHHBLGGGGGGLLBHGGDO.....",
+  ".....ODGLLDLMDDDDDDMLDLGGDO.....",
+  ".....ODGLDLMSWWMMSWWMLDLGDO.....",
+  "....ODGGLDLWWPPWGWPPWWLDLGDO....",
+  "....ODGGLDLDWWWMDMWWWDDDLGDO....",
+  "....ODGGLDLMDDDDDDDDMLDDLGDO....",
+  "....ODGGLDLMDDWPPWDDMLDDLGDO....",
+  "...ODGGLLDLMDDPRTPDDMLDDLLGDO...",
+  "...ODGGLLDLBDDDTTWDDMLDBLLGDO...",
+  "...ODGGLGDLGMMMDDDDMMGLDLLGDO...",
+  "....ODGLGDLGGLLGGGGLLGGLDLGDO...",
+  "....ODGGGDLGGLLGGBLLLGGLLDLGDO..",
+  "....ODGGLLGGLLGGDLLGGGLLGDLGDO..",
+  "....ODGGLLGGLLBGDLLGGGLLGDLGDO..",
+  ".....ODGLLGGLLGGLDLGGGLLGBLGDO..",
+  ".....ODGLLGGLDLGLDLGGGLLGDLGDO..",
+  ".....ODGLLGBLDLGLBLGGGLLGDLGDO..",
+  ".....ODGLLGDLDLGLDLGGGDLMGDLGDO.",
+  ".....ODGMMDGMGGMGDLGGGDLMGDLGDO.",
+  ".....ODGMMDGMGGMGDLGGGBLMGBLGDO.",
+  ".....ODGMMDGMGGMGBLGGGDLMMDLGDO.",
+  ".....ODDDMDGMMGMMDGGGGDMMMDLGDO.",
+  ".....ODDDMDGMMGMMDGGGGDMMMDLGDO.",
+  ".....ODDDMDDMMDDMDGGGGDMMMDDGDO.",
+  "......ODDDDDDDDDDDDDDDDDDDDDDO..",
+  ".......OODDDDDDDDDDDDDDDDDDOO...",
+  ".........OOOOOOOOOOOOOOOOOO.....",
+  "................................",
+  "................................",
+  "................................"
+];
+
+let mossMonsterCanvasCache: HTMLCanvasElement | null = null;
+
+function getMossMonsterCanvas(): HTMLCanvasElement {
+  if (mossMonsterCanvasCache) return mossMonsterCanvasCache;
+  if (typeof document === 'undefined') return null as any;
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 38;
+  const cCtx = canvas.getContext('2d');
+  if (cCtx) {
+    for (let y = 0; y < MOSS_SPRITE_DATA.length; y++) {
+      const row = MOSS_SPRITE_DATA[y];
+      for (let x = 0; x < row.length; x++) {
+        const char = row[x];
+        const color = MOSS_PALETTE[char];
+        if (color && color !== 'transparent') {
+          cCtx.fillStyle = color;
+          cCtx.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+  }
+  mossMonsterCanvasCache = canvas;
+  return canvas;
+}
+
 /**
  * Draw 醜泥怪 (Mud Monster)
  */
@@ -40,125 +123,34 @@ export function drawMudMonster(
     ctx.filter = 'brightness(1.8) contrast(1.4)';
   }
 
-  const w = baseWidth;
-  const h = baseHeight;
-  const bob = isMoving ? Math.sin(walkCycle * 8) * (h * 0.05) : Math.sin(walkCycle * 3) * (h * 0.02);
-  const squash = isMoving ? 1 + Math.sin(walkCycle * 8) * 0.06 : 1;
+  const bob = isMoving ? Math.sin(walkCycle * 8) * 3 : Math.sin(walkCycle * 3) * 1.5;
+  const squash = isMoving ? 1 + Math.sin(walkCycle * 8) * 0.05 : 1;
 
   // Shadow under monster
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.fillStyle = 'rgba(20, 32, 16, 0.4)';
   ctx.beginPath();
-  ctx.ellipse(0, 0, (w * 0.45), (h * 0.12), 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, baseWidth * 0.42, 6, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Mud Body Base
-  const bodyY = -h + bob;
-  const curW = w * squash;
-  const curH = h / squash;
+  const spriteCanvas = getMossMonsterCanvas();
+  if (spriteCanvas) {
+    const drawW = baseWidth * squash;
+    const drawH = baseHeight / squash;
+    const drawX = -drawW / 2;
+    const drawY = -drawH + bob;
 
-  // Sludge & moss blob layers matching the official video picture-book style
-  const cDark = '#1e2d19';
-  const cMid = '#334827';
-  const cLight = '#4d693c';
-  const cMoss = '#6b8e56';
-  const cMud = '#6e4c27';
+    // Nearest-neighbor rendering for pure crisp pixel edges
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-  // Base mossy mud silhouette
-  ctx.fillStyle = cDark;
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.55, curW * 0.48, curH * 0.45, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Top head hump
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.38, curW * 0.38, curH * 0.35, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Midtone inner body (moss green)
-  ctx.fillStyle = cMid;
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.56, curW * 0.42, curH * 0.38, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.4, curW * 0.32, curH * 0.3, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Moss highlights & organic sludge patches
-  ctx.fillStyle = cLight;
-  ctx.fillRect(-curW * 0.25, bodyY + curH * 0.2, curW * 0.15, curH * 0.12);
-  ctx.fillRect(curW * 0.12, bodyY + curH * 0.24, curW * 0.12, curH * 0.1);
-  ctx.fillRect(-curW * 0.32, bodyY + curH * 0.48, curW * 0.1, curH * 0.12);
-
-  // River mud spots
-  ctx.fillStyle = cMud;
-  ctx.fillRect(-curW * 0.18, bodyY + curH * 0.65, curW * 0.14, curH * 0.09);
-  ctx.fillRect(curW * 0.16, bodyY + curH * 0.62, curW * 0.12, curH * 0.08);
-
-  // Sludge/moss sprout on top
-  ctx.fillStyle = cMoss;
-  ctx.beginPath();
-  const bubbleY = bodyY + curH * 0.12 + Math.sin(walkCycle * 6) * 3;
-  ctx.arc(-curW * 0.15, bubbleY, curW * 0.08, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eyes (Big expressive cartoon eyes looking upwards towards falling trash)
-  const eyeRadius = curW * 0.13;
-  const eyeY = bodyY + curH * 0.35;
-  const eyeSpread = curW * 0.18;
-
-  // Eye whites
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(-eyeSpread, eyeY, eyeRadius, 0, Math.PI * 2);
-  ctx.arc(eyeSpread, eyeY, eyeRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eye pupils looking up
-  ctx.fillStyle = '#1e1b18';
-  const pupilRadius = eyeRadius * 0.55;
-  const pupilOffset = isCatching ? -eyeRadius * 0.35 : -eyeRadius * 0.25;
-  ctx.beginPath();
-  ctx.arc(-eyeSpread, eyeY + pupilOffset, pupilRadius, 0, Math.PI * 2);
-  ctx.arc(eyeSpread, eyeY + pupilOffset, pupilRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Eye glints
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(-eyeSpread + 2, eyeY + pupilOffset - 2, pupilRadius * 0.4, 0, Math.PI * 2);
-  ctx.arc(eyeSpread + 2, eyeY + pupilOffset - 2, pupilRadius * 0.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mouth (Opens wide when catching or near trash)
-  const mouthY = bodyY + curH * 0.62;
-  if (isCatching) {
-    ctx.fillStyle = '#261208';
-    ctx.beginPath();
-    ctx.ellipse(0, mouthY, curW * 0.22, curH * 0.18, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cute pink tongue
-    ctx.fillStyle = '#f43f5e';
-    ctx.beginPath();
-    ctx.ellipse(0, mouthY + curH * 0.08, curW * 0.14, curH * 0.08, 0, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    // Happy wavy sludge smile
-    ctx.strokeStyle = '#261208';
-    ctx.lineWidth = Math.max(2, curW * 0.04);
-    ctx.beginPath();
-    ctx.arc(0, mouthY - curH * 0.04, curW * 0.15, 0.2, Math.PI - 0.2);
-    ctx.stroke();
+    // If catching, render animated mouth open
+    if (isCatching) {
+      ctx.fillStyle = '#a32c27';
+      ctx.fillRect(drawX + drawW * 0.42, drawY + drawH * 0.41, drawW * 0.16, drawH * 0.09);
+      ctx.fillStyle = '#f2efdf';
+      ctx.fillRect(drawX + drawW * 0.45, drawY + drawH * 0.40, drawW * 0.1, drawH * 0.025);
+    }
   }
-
-  // Waving sludge hands / pseudopods on sides
-  ctx.fillStyle = cMid;
-  const handBob = Math.sin(walkCycle * 7) * (curH * 0.08);
-  ctx.beginPath();
-  ctx.ellipse(-curW * 0.42, bodyY + curH * 0.52 + handBob, curW * 0.14, curH * 0.18, -0.3, 0, Math.PI * 2);
-  ctx.ellipse(curW * 0.42, bodyY + curH * 0.52 - handBob, curW * 0.14, curH * 0.18, 0.3, 0, Math.PI * 2);
-  ctx.fill();
 
   ctx.restore();
 }

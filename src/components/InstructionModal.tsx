@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { SkipForward, ChevronRight, Keyboard, Sparkles } from 'lucide-react';
 import { sound } from '../audio/soundManager';
+import { MossMonsterSprite } from './MossMonsterSprite';
 
 interface InstructionModalProps {
   onComplete: () => void;
@@ -108,8 +109,8 @@ export const InstructionModal: React.FC<InstructionModalProps> = ({ onComplete }
       {/* Main Dialogue Card */}
       <div className="z-10 max-w-xl mx-auto w-full my-auto space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-[#20332c] border-2 border-[#10b981]/60 flex items-center justify-center text-2xl shadow-inner shadow-black/40">
-            {current.icon}
+          <div className="w-12 h-12 rounded-xl bg-[#20332c] border-2 border-[#10b981]/60 flex items-center justify-center text-2xl shadow-inner shadow-black/40 overflow-hidden">
+            {current.step === '02' ? <MossMonsterSprite size={36} /> : current.icon}
           </div>
           <div>
             <div className="text-xs font-pixel text-[#fbbf24]">STEP {current.step} / 06</div>

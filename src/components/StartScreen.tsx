@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Sparkles, Film } from 'lucide-react';
 import { sound } from '../audio/soundManager';
+import { MossMonsterSprite } from './MossMonsterSprite';
 
 interface StartScreenProps {
   nickname: string;
@@ -105,8 +106,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         {/* Character Avatar Icon Pixel Preview */}
         <div className="flex items-center justify-center gap-6 py-2">
           <div className="flex flex-col items-center gap-1">
-            <div className="w-16 h-16 rounded-xl bg-[#233522]/90 border-2 border-[#527043] flex items-center justify-center text-3xl shadow-lg shadow-black/30">
-              👾
+            <div className="w-16 h-16 rounded-xl bg-[#233522]/90 border-2 border-[#527043] flex items-center justify-center shadow-lg shadow-black/30 overflow-hidden">
+              <MossMonsterSprite size={48} />
             </div>
             <span className="text-[11px] font-pixel-tc text-[#a3e635] font-bold">醜泥怪 (一般)</span>
           </div>
