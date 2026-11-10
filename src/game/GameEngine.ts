@@ -18,7 +18,7 @@ import {
   TRASH_TYPES,
 } from '../types/game';
 import { sound } from '../audio/soundManager';
-import { ThreeRiverWater } from './ThreeRiverWater';
+import { ThreeSceneBackground } from './ThreeSceneBackground';
 import {
   drawMudMonster,
   drawMidori,
@@ -33,7 +33,7 @@ export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   private animFrameId: number | null = null;
   private lastTimestamp: number = 0;
-  private threeWater: ThreeRiverWater;
+  private threeScene: ThreeSceneBackground;
 
   // Virtual resolution (16:9 standard retro aspect)
   public readonly V_WIDTH = 960;
@@ -105,11 +105,10 @@ export class GameEngine {
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Could not get 2D context');
     this.ctx = context;
-    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.imageSmoothingEnabled = true;
 
-    // Initialize Three.js 3D dynamic river water surface (height: 115px covering y: 425..540)
-    const riverHeight = this.V_HEIGHT - (this.RIVER_Y - 5);
-    this.threeWater = new ThreeRiverWater(this.V_WIDTH, riverHeight);
+    // Initialize full-screen Three.js 3D Game World Background (960x540)
+    this.threeScene = new ThreeSceneBackground(this.V_WIDTH, this.V_HEIGHT);
 
     this.initPedestrians();
     this.scheduleNextRaindrop();
@@ -181,8 +180,8 @@ export class GameEngine {
 
   public destroy() {
     this.stop();
-    if (this.threeWater) {
-      this.threeWater.dispose();
+    if (this.threeScene) {
+      this.threeScene.dispose();
     }
   }
 
@@ -735,25 +734,18 @@ export class GameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.V_WIDTH, this.V_HEIGHT);
 
-    // 1. Draw 3D Stereoscopic Bridge, Monumental Arch Supports, Clouds, Volumetric Light
-    const hasThreeWater = Boolean(this.threeWater && this.threeWater.isAvailable);
-    drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime, this.playerX, hasThreeWater);
-
-    // 2. Render & Composite Three.js 3D Dynamic River Water Surface (y: 425..540)
-    if (hasThreeWater) {
-      this.threeWater.update(this.effectiveGameTime, this.waterQuality, this.playerX);
-      this.threeWater.render();
-      const riverStartY = this.RIVER_Y - 5;
-      ctx.drawImage(
-        this.threeWater.getCanvas(),
-        0,
-        riverStartY,
-        this.V_WIDTH,
-        this.V_HEIGHT - riverStartY
-      );
+    // 1. Render Full-Screen Three.js 3D World Background (Sky, Clouds, Horizon Foliage,
+    //    3D Bridge Deck, 3D Vertical Arch Supports & Piers, Volumetric God Rays & 3D River Water)
+    const hasThreeScene = Boolean(this.threeScene && this.threeScene.isAvailable);
+    if (hasThreeScene) {
+      this.threeScene.update(this.effectiveGameTime, this.waterQuality, this.playerX);
+      this.threeScene.render();
+      ctx.drawImage(this.threeScene.getCanvas(), 0, 0, this.V_WIDTH, this.V_HEIGHT);
+    } else {
+      drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime, this.playerX, false);
     }
 
-    // 3. Draw Pedestrians on bridge
+    // 2. Draw Pedestrians on bridge
     for (const p of this.pedestrians) {
       drawPedestrian(ctx, p);
     }

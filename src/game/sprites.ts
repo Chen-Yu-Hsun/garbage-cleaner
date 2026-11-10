@@ -279,16 +279,293 @@ function renderColoredPencilSpriteCanvas(
   return canvas;
 }
 
+/**
+ * Pre-render High-Definition Realistic 醜泥怪 (Mud & Moss River Guardian)
+ * Combines 3D volumetric anatomical shading, thousands of fine botanical moss fibers,
+ * wet river mud sheen, embedded pebbles, sprouting fern fronds, and realistic eyes.
+ */
 let mossMonsterCanvasCache: HTMLCanvasElement | null = null;
 
 function getMossMonsterCanvas(): HTMLCanvasElement {
   if (mossMonsterCanvasCache) return mossMonsterCanvasCache;
-  mossMonsterCanvasCache = renderColoredPencilSpriteCanvas(MOSS_SPRITE_DATA, MOSS_PALETTE, 307);
-  return mossMonsterCanvasCache;
+  if (typeof document === 'undefined') return null as any;
+
+  const w = 240;
+  const h = 260;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+  if (!c) return canvas;
+
+  const rand = seededRandom(1307);
+  const cx = w / 2;
+  const cy = h * 0.56;
+
+  // 1. Base Volumetric 3D Body Silhouette (Sturdy swamp creature torso, shoulders & limbs)
+  c.save();
+  c.beginPath();
+  // Head crown -> left shoulder -> left arm -> left hip/leg -> bottom base -> right hip -> right arm -> right shoulder
+  c.moveTo(cx, h * 0.10);
+  c.bezierCurveTo(cx - 58, h * 0.10, cx - 84, h * 0.34, cx - 92, h * 0.58);
+  c.bezierCurveTo(cx - 98, h * 0.76, cx - 86, h * 0.92, cx - 58, h * 0.95);
+  c.bezierCurveTo(cx - 20, h * 0.98, cx + 20, h * 0.98, cx + 58, h * 0.95);
+  c.bezierCurveTo(cx + 86, h * 0.92, cx + 98, h * 0.76, cx + 92, h * 0.58);
+  c.bezierCurveTo(cx + 84, h * 0.34, cx + 58, h * 0.10, cx, h * 0.10);
+  c.closePath();
+
+  // Deep 3D radial shading (top-left sunlit chartreuse-olive to bottom-right deep swamp peat)
+  const bodyGrad = c.createRadialGradient(cx - 24, h * 0.32, 16, cx, cy, 108);
+  bodyGrad.addColorStop(0, '#8ba862');
+  bodyGrad.addColorStop(0.42, '#5c783c');
+  bodyGrad.addColorStop(0.78, '#384d23');
+  bodyGrad.addColorStop(1, '#1b2611');
+  c.fillStyle = bodyGrad;
+  c.fill();
+
+  c.clip();
+
+  // 2. Realistic Multi-Layered Bryophyte Moss Cushions (Volumetric clumps across torso & shoulders)
+  const clumpColors = ['#253617', '#354a21', '#49632f', '#5e7d3f', '#759652', '#8fb068', '#a6c47e'];
+  for (let i = 0; i < 180; i++) {
+    const angle = rand() * Math.PI * 2;
+    const dist = Math.pow(rand(), 0.75) * 95;
+    const mx = cx + Math.cos(angle) * dist;
+    const my = cy - 10 + Math.sin(angle) * dist * 0.95;
+    const mr = 8 + rand() * 16;
+
+    // Normalize height for realistic top-down lighting
+    const lightT = Math.max(0, Math.min(1, 1 - (my - h * 0.1) / (h * 0.85) - (mx - cx) / 220));
+    const colIdx = Math.min(
+      clumpColors.length - 1,
+      Math.floor(lightT * (clumpColors.length - 1) + (rand() - 0.4) * 2)
+    );
+
+    const clumpGrad = c.createRadialGradient(mx - mr * 0.25, my - mr * 0.25, 1, mx, my, mr);
+    clumpGrad.addColorStop(0, clumpColors[Math.min(clumpColors.length - 1, colIdx + 1)]);
+    clumpGrad.addColorStop(0.65, clumpColors[Math.max(0, colIdx)]);
+    clumpGrad.addColorStop(1, 'rgba(24, 36, 14, 0)');
+    c.fillStyle = clumpGrad;
+    c.beginPath();
+    c.arc(mx, my, mr, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 3. Realistic Wet River Mud & Peat Crevices (Organic dark mud veins & wet specular highlights)
+  for (let m = 0; m < 35; m++) {
+    const mx = cx + (rand() - 0.5) * 140;
+    const my = h * 0.45 + rand() * (h * 0.48);
+    c.fillStyle = 'rgba(38, 26, 16, 0.42)';
+    c.beginPath();
+    c.ellipse(mx, my, 6 + rand() * 12, 3 + rand() * 6, (rand() - 0.5) * 0.8, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 4. Thousands of Fine Realistic Moss Strands & Hanging Tendrils
+  c.lineCap = 'round';
+  for (let s = 0; s < 950; s++) {
+    const sx = cx + (rand() - 0.5) * 182;
+    const sy = h * 0.11 + rand() * (h * 0.84);
+    const len = 5 + rand() * 11;
+    // Strands drape downward and outward naturally
+    const outAngle = Math.PI * 0.5 + ((sx - cx) / 110) * 0.55 + (rand() - 0.5) * 0.45;
+    const ex = sx + Math.cos(outAngle) * len;
+    const ey = sy + Math.sin(outAngle) * len;
+
+    const isHighlight = sy < h * 0.42 && rand() > 0.45;
+    c.strokeStyle = isHighlight
+      ? ['#9ebb73', '#b5d18a', '#84a35a'][Math.floor(rand() * 3)]
+      : ['#2b3d1b', '#3e5428', '#526e37', '#688749'][Math.floor(rand() * 4)];
+    c.lineWidth = 0.9 + rand() * 1.3;
+    c.globalAlpha = 0.55 + rand() * 0.4;
+
+    c.beginPath();
+    c.moveTo(sx, sy);
+    c.quadraticCurveTo(
+      (sx + ex) / 2 + (rand() - 0.5) * 4,
+      (sy + ey) / 2 + 2,
+      ex,
+      ey
+    );
+    c.stroke();
+  }
+  c.restore();
+
+  // 5. Outer Shaggy Moss Edge Fringes & Sprouting Woodland Clover/Fern on Crown
+  c.save();
+  for (let i = 0; i < 120; i++) {
+    const t = i / 120;
+    const ang = Math.PI * 0.85 + t * Math.PI * 1.3;
+    const rx = 86 + Math.sin(ang * 3) * 5;
+    const ry = 98;
+    const bx = cx + Math.cos(ang) * rx;
+    const by = cy + 6 + Math.sin(ang) * ry;
+    const tuftLen = 5 + rand() * 8;
+    c.strokeStyle = by < cy ? '#6d8c49' : '#2a3b1a';
+    c.lineWidth = 1.6 + rand();
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(bx, by);
+    c.lineTo(bx + Math.cos(ang) * tuftLen, by + Math.sin(ang) * tuftLen + 3);
+    c.stroke();
+  }
+
+  // Tiny botanical sprout on top of head
+  c.strokeStyle = '#4d6b2f';
+  c.lineWidth = 2.2;
+  c.beginPath();
+  c.moveTo(cx + 4, h * 0.11);
+  c.quadraticCurveTo(cx + 8, h * 0.04, cx + 16, h * 0.03);
+  c.stroke();
+  // Two realistic little leaves on crown sprout
+  c.fillStyle = '#8ec255';
+  c.strokeStyle = '#2d4217';
+  c.lineWidth = 1;
+  c.beginPath();
+  c.ellipse(cx + 17, h * 0.03, 7, 3.5, -0.3, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+  c.beginPath();
+  c.ellipse(cx + 6, h * 0.05, 5.5, 2.8, -2.4, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  // Small embedded river pebbles on shoulder & base
+  const pebbles = [
+    { x: cx - 52, y: h * 0.48, rx: 5.5, ry: 3.8, col: '#78716c' },
+    { x: cx + 56, y: h * 0.56, rx: 4.8, ry: 3.2, col: '#57534e' },
+    { x: cx - 38, y: h * 0.84, rx: 6.2, ry: 4.0, col: '#64748b' },
+  ];
+  for (const p of pebbles) {
+    c.fillStyle = p.col;
+    c.beginPath();
+    c.ellipse(p.x, p.y, p.rx, p.ry, 0.2, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.45)';
+    c.beginPath();
+    c.ellipse(p.x - 1.5, p.y - 1, p.rx * 0.4, p.ry * 0.35, 0.2, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 6. Realistic Sculpted Facial Features (Brow Ridge, Detailed Eyes with Irises, Mouth & Tongue)
+  const eyeY = h * 0.34;
+  const eyeOffsetX = 24;
+
+  // Deep eye socket shadow & overhanging mossy brow ridge
+  for (const side of [-1, 1]) {
+    const ex = cx + side * eyeOffsetX;
+
+    // Socket ambient occlusion
+    c.fillStyle = 'rgba(18, 26, 10, 0.78)';
+    c.beginPath();
+    c.ellipse(ex, eyeY + 1, 17, 13.5, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Realistic eyeball sclera with 3D spherical shading
+    const scleraGrad = c.createRadialGradient(ex - 3, eyeY - 3, 2, ex, eyeY, 14);
+    scleraGrad.addColorStop(0, '#fffef7');
+    scleraGrad.addColorStop(0.7, '#e7e2ce');
+    scleraGrad.addColorStop(1, '#9c947a');
+    c.fillStyle = scleraGrad;
+    c.beginPath();
+    c.ellipse(ex, eyeY, 14, 11, 0, 0, Math.PI * 2);
+    c.fill();
+
+    // Realistic Hazel-Amber Iris with radial fibers
+    const irisX = ex - side * 1.5;
+    const irisGrad = c.createRadialGradient(irisX, eyeY, 1.5, irisX, eyeY, 6.8);
+    irisGrad.addColorStop(0, '#d97706');
+    irisGrad.addColorStop(0.65, '#92400e');
+    irisGrad.addColorStop(1, '#291507');
+    c.fillStyle = irisGrad;
+    c.beginPath();
+    c.arc(irisX, eyeY, 6.5, 0, Math.PI * 2);
+    c.fill();
+
+    // Deep glossy pupil
+    c.fillStyle = '#0f0a06';
+    c.beginPath();
+    c.arc(irisX, eyeY, 3.4, 0, Math.PI * 2);
+    c.fill();
+
+    // Dual realistic corneal specular catchlights
+    c.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    c.beginPath();
+    c.arc(irisX - 2.2, eyeY - 2.4, 2.1, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    c.beginPath();
+    c.arc(irisX + 2.0, eyeY + 2.0, 1.0, 0, Math.PI * 2);
+    c.fill();
+
+    // Upper heavy mossy eyelid & brow fold
+    c.fillStyle = '#33471f';
+    c.beginPath();
+    c.ellipse(ex, eyeY - 6.5, 15.5, 5.5, side * -0.08, Math.PI, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#1a2410';
+    c.lineWidth = 2.0;
+    c.beginPath();
+    c.arc(ex, eyeY + 2, 14.2, Math.PI * 1.08, Math.PI * 1.92);
+    c.stroke();
+  }
+
+  // Realistic Resting Mouth & Moist Pink Tongue Tip
+  const mouthY = h * 0.48;
+  // Mouth crease shadow
+  c.fillStyle = '#181f10';
+  c.beginPath();
+  c.moveTo(cx - 26, mouthY - 1);
+  c.quadraticCurveTo(cx, mouthY + 12, cx + 26, mouthY - 1);
+  c.quadraticCurveTo(cx, mouthY + 4, cx - 26, mouthY - 1);
+  c.closePath();
+  c.fill();
+
+  // Cute realistic glossed pink tongue peeking out
+  const tongueGrad = c.createLinearGradient(cx, mouthY, cx, mouthY + 15);
+  tongueGrad.addColorStop(0, '#9f1239');
+  tongueGrad.addColorStop(0.4, '#e11d48');
+  tongueGrad.addColorStop(1, '#fda4af');
+  c.fillStyle = tongueGrad;
+  c.beginPath();
+  c.arc(cx, mouthY + 3, 9.5, 0.05, Math.PI - 0.05);
+  c.fill();
+  c.strokeStyle = '#4c0519';
+  c.lineWidth = 1.4;
+  c.stroke();
+
+  // Tongue central sulcus & wet specular shine
+  c.strokeStyle = 'rgba(136, 19, 55, 0.6)';
+  c.lineWidth = 1.1;
+  c.beginPath();
+  c.moveTo(cx, mouthY + 3);
+  c.lineTo(cx, mouthY + 10);
+  c.stroke();
+  c.fillStyle = 'rgba(255, 255, 255, 0.65)';
+  c.beginPath();
+  c.ellipse(cx - 3, mouthY + 7, 2.2, 1.2, -0.2, 0, Math.PI * 2);
+  c.fill();
+
+  // Two small ivory lower canine teeth tips
+  c.fillStyle = '#fefce8';
+  c.beginPath();
+  c.moveTo(cx - 14, mouthY + 2);
+  c.lineTo(cx - 11, mouthY - 3);
+  c.lineTo(cx - 8, mouthY + 3);
+  c.fill();
+  c.beginPath();
+  c.moveTo(cx + 8, mouthY + 3);
+  c.lineTo(cx + 11, mouthY - 3);
+  c.lineTo(cx + 14, mouthY + 2);
+  c.fill();
+
+  c.restore();
+  mossMonsterCanvasCache = canvas;
+  return canvas;
 }
 
 /**
- * Draw 醜泥怪 (Mud Monster - Hand-Drawn Colored Pencil Style)
+ * Draw 醜泥怪 (Mud Monster - High-Detail Realistic Moss Creature)
  */
 export function drawMudMonster(
   ctx: CanvasRenderingContext2D,
@@ -305,186 +582,147 @@ export function drawMudMonster(
   ctx.save();
   ctx.translate(Math.floor(centerX), Math.floor(bottomY));
 
-  // Mirror horizontally based on movement direction
   if (flipX) {
     ctx.scale(-1, 1);
   }
 
-  // If flashing during transformation
   if (isFlashing) {
-    ctx.filter = 'brightness(1.6) contrast(1.25)';
+    ctx.filter = 'brightness(1.5) contrast(1.2)';
   }
 
-  const bob = isMoving ? Math.sin(walkCycle * 8) * 3 : Math.sin(walkCycle * 3) * 1.5;
-  const squash = isMoving ? 1 + Math.sin(walkCycle * 8) * 0.05 : 1;
+  const bob = isMoving ? Math.sin(walkCycle * 8) * 3.2 : Math.sin(walkCycle * 3) * 1.5;
+  const squash = isMoving ? 1 + Math.sin(walkCycle * 8) * 0.045 : 1;
+  const tilt = isMoving ? Math.cos(walkCycle * 8) * 0.04 : 0;
 
-  // Hand-shaded pencil shadow under monster
-  ctx.fillStyle = 'rgba(42, 52, 30, 0.35)';
+  // Realistic Water Ripple & Ambient Occlusion Shadow under Monster
+  const shadowGrad = ctx.createRadialGradient(0, 0, baseWidth * 0.1, 0, 0, baseWidth * 0.52);
+  shadowGrad.addColorStop(0, 'rgba(15, 25, 12, 0.58)');
+  shadowGrad.addColorStop(0.65, 'rgba(20, 38, 18, 0.28)');
+  shadowGrad.addColorStop(1, 'rgba(20, 38, 18, 0)');
+  ctx.fillStyle = shadowGrad;
   ctx.beginPath();
-  ctx.ellipse(0, 0, baseWidth * 0.44, 5.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 1, baseWidth * 0.52, 7.5, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // Dynamic water ring around monster's submerged feet
+  ctx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.ellipse(0, 1, baseWidth * (0.46 + Math.sin(walkCycle * 5) * 0.03), 5.2, 0, 0, Math.PI * 2);
+  ctx.stroke();
 
   const spriteCanvas = getMossMonsterCanvas();
   if (spriteCanvas) {
-    const drawW = baseWidth * squash;
-    const drawH = baseHeight / squash;
+    const drawW = baseWidth * 1.12 * squash;
+    const drawH = (baseHeight * 1.14) / squash;
     const drawX = -drawW / 2;
-    const drawY = -drawH + bob;
+    const drawY = -drawH + bob + 3;
 
-    // Nearest-neighbor / smooth colored-pencil rendering
+    ctx.save();
+    ctx.rotate(tilt);
     const prevSmooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-    // Exaggerated Giant Gaping Mouth Catching / Eating Animation (張大嘴吃垃圾誇張化放大)
+    // Exaggerated Realistic Giant Gaping Mouth Catching / Eating Animation (寫實化張大嘴吃垃圾動作)
     if (isCatching) {
-      // 1. Cute rosy cheek blush
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.72)';
+      // 1. Warm subsurface flush on cheeks
+      const blushL = ctx.createRadialGradient(-drawW * 0.28, drawY + drawH * 0.39, 1, -drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11);
+      blushL.addColorStop(0, 'rgba(244, 63, 94, 0.65)');
+      blushL.addColorStop(1, 'rgba(244, 63, 94, 0)');
+      ctx.fillStyle = blushL;
       ctx.beginPath();
-      ctx.ellipse(-drawW * 0.32, drawY + drawH * 0.38, drawW * 0.08, drawH * 0.05, 0, 0, Math.PI * 2);
-      ctx.ellipse(drawW * 0.32, drawY + drawH * 0.38, drawW * 0.08, drawH * 0.05, 0, 0, Math.PI * 2);
+      ctx.arc(-drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Excited squinted anime cartoon eyes (> <)
-      ctx.save();
-      ctx.strokeStyle = '#1e2816';
-      ctx.lineWidth = 2.4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // Left eye >
+      const blushR = ctx.createRadialGradient(drawW * 0.28, drawY + drawH * 0.39, 1, drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11);
+      blushR.addColorStop(0, 'rgba(244, 63, 94, 0.65)');
+      blushR.addColorStop(1, 'rgba(244, 63, 94, 0)');
+      ctx.fillStyle = blushR;
       ctx.beginPath();
-      ctx.moveTo(-drawW * 0.24, drawY + drawH * 0.27);
-      ctx.lineTo(-drawW * 0.13, drawY + drawH * 0.31);
-      ctx.lineTo(-drawW * 0.24, drawY + drawH * 0.35);
-      ctx.stroke();
+      ctx.arc(drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11, 0, Math.PI * 2);
+      ctx.fill();
 
-      // Right eye <
-      ctx.beginPath();
-      ctx.moveTo(drawW * 0.24, drawY + drawH * 0.27);
-      ctx.lineTo(drawW * 0.13, drawY + drawH * 0.31);
-      ctx.lineTo(drawW * 0.24, drawY + drawH * 0.35);
-      ctx.stroke();
-      ctx.restore();
-
-      // 3. GIANT GAPING CAVERN MOUTH (誇張放大巨嘴)
+      // 2. Realistic Anatomically Shaded Giant Cavern Mouth
       const mouthX = 0;
-      const mouthY = drawY + drawH * 0.52;
-      const mouthRx = drawW * 0.28; // 56% of monster width!
-      const mouthRy = drawH * 0.20; // 40% of monster height!
+      const mouthY = drawY + drawH * 0.54;
+      const mouthRx = drawW * 0.30;
+      const mouthRy = drawH * 0.22;
 
       ctx.save();
-      ctx.fillStyle = '#3f0707';
-      ctx.strokeStyle = '#1e110a';
-      ctx.lineWidth = 2.8;
+      // Outer mossy lip rim
+      ctx.fillStyle = '#263618';
+      ctx.beginPath();
+      ctx.ellipse(mouthX, mouthY, mouthRx + 2.5, mouthRy + 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Deep oral cavity radial gradient
+      const throatGrad = ctx.createRadialGradient(mouthX, mouthY - 2, 2, mouthX, mouthY, mouthRx);
+      throatGrad.addColorStop(0, '#1f0306');
+      throatGrad.addColorStop(0.65, '#4c0519');
+      throatGrad.addColorStop(1, '#2e0812');
+      ctx.fillStyle = throatGrad;
       ctx.beginPath();
       ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
 
-      // Clip inside mouth for tongue and fangs
       ctx.save();
       ctx.beginPath();
       ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
       ctx.clip();
 
-      // Big bouncy pink tongue
-      ctx.fillStyle = '#fb7185';
-      ctx.strokeStyle = '#e11d48';
-      ctx.lineWidth = 1.2;
+      // Realistic Glossy Muscular Tongue
+      const tGrad = ctx.createLinearGradient(mouthX, mouthY, mouthX, mouthY + mouthRy);
+      tGrad.addColorStop(0, '#be123c');
+      tGrad.addColorStop(0.5, '#f43f5e');
+      tGrad.addColorStop(1, '#fda4af');
+      ctx.fillStyle = tGrad;
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY + mouthRy * 0.45, mouthRx * 0.72, mouthRy * 0.65, 0, 0, Math.PI * 2);
+      ctx.ellipse(mouthX, mouthY + mouthRy * 0.46, mouthRx * 0.76, mouthRy * 0.68, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
 
-      // Sharp upper cartoon fangs (上排尖牙)
-      ctx.fillStyle = '#fffdf5';
-      ctx.strokeStyle = '#2c1810';
-      ctx.lineWidth = 1.0;
-      const fangsTopY = mouthY - mouthRy;
-      const fangW = mouthRx * 0.32;
-      const fangH = mouthRy * 0.65;
-
-      // Fang 1 (left)
+      // Tongue highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.beginPath();
-      ctx.moveTo(-mouthRx * 0.65, fangsTopY);
-      ctx.lineTo(-mouthRx * 0.65 + fangW * 0.5, fangsTopY + fangH);
-      ctx.lineTo(-mouthRx * 0.65 + fangW, fangsTopY);
-      ctx.closePath();
+      ctx.ellipse(mouthX - mouthRx * 0.18, mouthY + mouthRy * 0.32, mouthRx * 0.22, mouthRy * 0.15, -0.15, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
 
-      // Fang 2 (center-left)
-      ctx.beginPath();
-      ctx.moveTo(-mouthRx * 0.25, fangsTopY);
-      ctx.lineTo(-mouthRx * 0.25 + fangW * 0.5, fangsTopY + fangH * 1.15);
-      ctx.lineTo(-mouthRx * 0.25 + fangW, fangsTopY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      // Realistic Shaded Ivory Upper & Lower Fangs
+      const drawRealisticFang = (fx: number, fy: number, fw: number, fh: number, pointDown: boolean) => {
+        const fGrad = ctx.createLinearGradient(fx, fy, fx, fy + (pointDown ? fh : -fh));
+        fGrad.addColorStop(0, '#d6c7a9');
+        fGrad.addColorStop(0.4, '#fefce8');
+        fGrad.addColorStop(1, '#ffffff');
+        ctx.fillStyle = fGrad;
+        ctx.strokeStyle = '#3f2e1e';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(fx - fw / 2, fy);
+        ctx.quadraticCurveTo(fx - fw * 0.15, fy + (pointDown ? fh * 0.7 : -fh * 0.7), fx, fy + (pointDown ? fh : -fh));
+        ctx.quadraticCurveTo(fx + fw * 0.15, fy + (pointDown ? fh * 0.7 : -fh * 0.7), fx + fw / 2, fy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      };
 
-      // Fang 3 (center-right)
-      ctx.beginPath();
-      ctx.moveTo(mouthRx * 0.25 - fangW, fangsTopY);
-      ctx.lineTo(mouthRx * 0.25 - fangW * 0.5, fangsTopY + fangH * 1.15);
-      ctx.lineTo(mouthRx * 0.25, fangsTopY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      const topY = mouthY - mouthRy * 0.92;
+      const fW = mouthRx * 0.26;
+      const fH = mouthRy * 0.68;
+      drawRealisticFang(-mouthRx * 0.52, topY, fW, fH * 0.9, true);
+      drawRealisticFang(-mouthRx * 0.18, topY, fW, fH * 1.1, true);
+      drawRealisticFang(mouthRx * 0.18, topY, fW, fH * 1.1, true);
+      drawRealisticFang(mouthRx * 0.52, topY, fW, fH * 0.9, true);
 
-      // Fang 4 (right)
-      ctx.beginPath();
-      ctx.moveTo(mouthRx * 0.65 - fangW, fangsTopY);
-      ctx.lineTo(mouthRx * 0.65 - fangW * 0.5, fangsTopY + fangH);
-      ctx.lineTo(mouthRx * 0.65, fangsTopY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      const botY = mouthY + mouthRy * 0.94;
+      drawRealisticFang(-mouthRx * 0.34, botY, fW * 0.85, fH * 0.65, false);
+      drawRealisticFang(mouthRx * 0.34, botY, fW * 0.85, fH * 0.65, false);
 
-      // Lower cute fangs (下排獠牙)
-      const fangsBotY = mouthY + mouthRy;
-      ctx.beginPath();
-      ctx.moveTo(-mouthRx * 0.35, fangsBotY);
-      ctx.lineTo(-mouthRx * 0.2, fangsBotY - fangH * 0.6);
-      ctx.lineTo(-mouthRx * 0.05, fangsBotY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(mouthRx * 0.05, fangsBotY);
-      ctx.lineTo(mouthRx * 0.2, fangsBotY - fangH * 0.6);
-      ctx.lineTo(mouthRx * 0.35, fangsBotY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.restore(); // restore clip
-      ctx.restore(); // restore mouth
-
-      // 4. Action Chomp Sparkles & Impact Lines (吃入垃圾衝擊線)
-      ctx.save();
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 1.8;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(-drawW * 0.48, mouthY - 4);
-      ctx.lineTo(-drawW * 0.58, mouthY - 8);
-      ctx.moveTo(-drawW * 0.46, mouthY + 5);
-      ctx.lineTo(-drawW * 0.56, mouthY + 8);
-      ctx.moveTo(drawW * 0.48, mouthY - 4);
-      ctx.lineTo(drawW * 0.58, mouthY - 8);
-      ctx.moveTo(drawW * 0.46, mouthY + 5);
-      ctx.lineTo(drawW * 0.56, mouthY + 8);
-      ctx.stroke();
-
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(-drawW * 0.38, drawY - 4, 3.5, 3.5);
-      ctx.fillRect(drawW * 0.38, drawY - 4, 3.5, 3.5);
-      ctx.fillRect(0, drawY - 8, 4.5, 4.5);
-      ctx.restore();
+      ctx.restore(); // clip
+      ctx.restore(); // mouth
     }
+
     ctx.imageSmoothingEnabled = prevSmooth;
+    ctx.restore();
   }
 
   ctx.restore();
@@ -550,20 +788,360 @@ const WATER_SPIRIT_SPRITE_DATA = [
   "................................"
 ];
 
+/**
+ * Pre-render High-Definition Realistic 米多力 (Midori - Divine River Spirit / Water Goddess)
+ * Features cascading translucent water-silk hair strands, realistic sculpted facial anatomy,
+ * sapphire-teal irises with eyelashes, draped kimono-style silk & gold robes, and celestial ribbons.
+ */
 let waterSpiritCanvasCache: HTMLCanvasElement | null = null;
 
 function getWaterSpiritCanvas(): HTMLCanvasElement {
   if (waterSpiritCanvasCache) return waterSpiritCanvasCache;
-  waterSpiritCanvasCache = renderColoredPencilSpriteCanvas(
-    WATER_SPIRIT_SPRITE_DATA,
-    WATER_SPIRIT_PALETTE,
-    509
-  );
-  return waterSpiritCanvasCache;
+  if (typeof document === 'undefined') return null as any;
+
+  const w = 240;
+  const h = 280;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+  if (!c) return canvas;
+
+  const cx = w / 2;
+
+  // 1. Back Flowing Cascading Water-Silk Hair (Deep Ocean Teal to Luminous Cyan-White)
+  c.save();
+  const backHairGrad = c.createLinearGradient(cx, h * 0.08, cx, h * 0.92);
+  backHairGrad.addColorStop(0, '#125869');
+  backHairGrad.addColorStop(0.35, '#278ea5');
+  backHairGrad.addColorStop(0.75, '#64c5da');
+  backHairGrad.addColorStop(1, '#bcebf5');
+  c.fillStyle = backHairGrad;
+  c.beginPath();
+  c.moveTo(cx, h * 0.10);
+  c.bezierCurveTo(cx - 56, h * 0.14, cx - 78, h * 0.48, cx - 68, h * 0.86);
+  c.quadraticCurveTo(cx - 32, h * 0.95, cx, h * 0.92);
+  c.quadraticCurveTo(cx + 32, h * 0.95, cx + 68, h * 0.86);
+  c.bezierCurveTo(cx + 78, h * 0.48, cx + 56, h * 0.14, cx, h * 0.10);
+  c.closePath();
+  c.fill();
+
+  // Individual flowing silk hair strand highlights in back hair
+  c.strokeStyle = 'rgba(224, 247, 250, 0.38)';
+  c.lineWidth = 1.5;
+  for (let i = -5; i <= 5; i++) {
+    c.beginPath();
+    c.moveTo(cx + i * 6, h * 0.16);
+    c.bezierCurveTo(
+      cx + i * 11,
+      h * 0.42,
+      cx + i * 13 + Math.sin(i) * 8,
+      h * 0.68,
+      cx + i * 10,
+      h * 0.88
+    );
+    c.stroke();
+  }
+  c.restore();
+
+  // 2. Celestial Floating Water-Silk Ribbon (羽衣) Arching Behind Shoulders
+  c.save();
+  const ribbonGrad = c.createLinearGradient(cx - 85, h * 0.3, cx + 85, h * 0.6);
+  ribbonGrad.addColorStop(0, 'rgba(188, 235, 245, 0.25)');
+  ribbonGrad.addColorStop(0.5, 'rgba(100, 197, 218, 0.78)');
+  ribbonGrad.addColorStop(1, 'rgba(188, 235, 245, 0.25)');
+  c.strokeStyle = ribbonGrad;
+  c.lineWidth = 11;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(cx - 82, h * 0.68);
+  c.bezierCurveTo(cx - 96, h * 0.24, cx - 42, h * 0.05, cx, h * 0.07);
+  c.bezierCurveTo(cx + 42, h * 0.05, cx + 96, h * 0.24, cx + 82, h * 0.68);
+  c.stroke();
+
+  c.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+  c.lineWidth = 2;
+  c.stroke();
+  c.restore();
+
+  // 3. Realistic Draped Silk & Gold Water-Deity Robes (Torso, Wide Sleeves & Skirt)
+  c.save();
+  // Wide flowing aqua outer sleeves
+  const sleeveGrad = c.createLinearGradient(cx, h * 0.46, cx, h * 0.84);
+  sleeveGrad.addColorStop(0, '#45b0c7');
+  sleeveGrad.addColorStop(0.6, '#278ea5');
+  sleeveGrad.addColorStop(1, '#16697a');
+  c.fillStyle = sleeveGrad;
+  c.beginPath();
+  c.moveTo(cx - 24, h * 0.46);
+  c.bezierCurveTo(cx - 58, h * 0.50, cx - 76, h * 0.68, cx - 64, h * 0.82);
+  c.quadraticCurveTo(cx - 42, h * 0.84, cx - 28, h * 0.70);
+  c.lineTo(cx + 28, h * 0.70);
+  c.quadraticCurveTo(cx + 42, h * 0.84, cx + 64, h * 0.82);
+  c.bezierCurveTo(cx + 76, h * 0.68, cx + 58, h * 0.50, cx + 24, h * 0.46);
+  c.closePath();
+  c.fill();
+
+  // Main Golden-Silk & Deep Teal Tabard / Robe Skirt (y: 0.46 .. 0.95)
+  const robeGrad = c.createLinearGradient(cx - 38, h * 0.46, cx + 38, h * 0.95);
+  robeGrad.addColorStop(0, '#f3e3a8');
+  robeGrad.addColorStop(0.45, '#d6be78');
+  robeGrad.addColorStop(1, '#9e813c');
+  c.fillStyle = robeGrad;
+  c.beginPath();
+  c.moveTo(cx - 24, h * 0.46);
+  c.lineTo(cx + 24, h * 0.46);
+  c.bezierCurveTo(cx + 36, h * 0.64, cx + 44, h * 0.82, cx + 38, h * 0.95);
+  c.quadraticCurveTo(cx, h * 0.98, cx - 38, h * 0.95);
+  c.bezierCurveTo(cx - 44, h * 0.82, cx - 36, h * 0.64, cx - 24, h * 0.46);
+  c.closePath();
+  c.fill();
+  c.strokeStyle = '#785f24';
+  c.lineWidth = 1.6;
+  c.stroke();
+
+  // Central Deep-Teal Pleated Silk Front Panel & Drapery Folds
+  const centerPanelGrad = c.createLinearGradient(cx, h * 0.52, cx, h * 0.95);
+  centerPanelGrad.addColorStop(0, '#1b7a94');
+  centerPanelGrad.addColorStop(0.5, '#13576b');
+  centerPanelGrad.addColorStop(1, '#0c3b4a');
+  c.fillStyle = centerPanelGrad;
+  c.beginPath();
+  c.moveTo(cx - 12, h * 0.52);
+  c.lineTo(cx + 12, h * 0.52);
+  c.lineTo(cx + 18, h * 0.95);
+  c.quadraticCurveTo(cx, h * 0.97, cx - 18, h * 0.95);
+  c.closePath();
+  c.fill();
+
+  // Golden Obi Waist Sash & Jewel Clasp
+  c.fillStyle = '#b39754';
+  c.strokeStyle = '#6b531b';
+  c.lineWidth = 1.4;
+  c.beginPath();
+  c.roundRect(cx - 26, h * 0.55, 52, 12, 4);
+  c.fill();
+  c.stroke();
+
+  // Glowing Aqua Lotus Gem on Waist Sash
+  c.fillStyle = '#38bdf8';
+  c.beginPath();
+  c.arc(cx, h * 0.55 + 6, 4.5, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#ffffff';
+  c.beginPath();
+  c.arc(cx - 1.5, h * 0.55 + 4.5, 1.5, 0, Math.PI * 2);
+  c.fill();
+
+  // Realistic Hands Gently Clasped or Poised at Sleeves
+  c.fillStyle = '#e0f7fa';
+  c.strokeStyle = '#278ea5';
+  c.lineWidth = 1.2;
+  c.beginPath();
+  c.ellipse(cx - 34, h * 0.67, 6.5, 4.5, 0.3, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+  c.beginPath();
+  c.ellipse(cx + 34, h * 0.67, 6.5, 4.5, -0.3, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+  c.restore();
+
+  // 4. Realistic Neck & Sculpted Face (Porcelain-Aqua Skin with Warm Subsurface Blush)
+  c.save();
+  // Neck with collar shadow
+  c.fillStyle = '#a5e6f2';
+  c.beginPath();
+  c.roundRect(cx - 9, h * 0.39, 18, 22, 4);
+  c.fill();
+
+  // Crossed Kimono Collar (Eri) in crisp white & gold
+  c.fillStyle = '#ffffff';
+  c.strokeStyle = '#d6be78';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(cx - 18, h * 0.45);
+  c.lineTo(cx, h * 0.53);
+  c.lineTo(cx + 18, h * 0.45);
+  c.stroke();
+
+  // Sculpted Face Contour (Oval upper head tapering to delicate chin)
+  const faceY = h * 0.29;
+  const faceGrad = c.createRadialGradient(cx - 6, faceY - 8, 4, cx, faceY, 38);
+  faceGrad.addColorStop(0, '#f0fdff');
+  faceGrad.addColorStop(0.55, '#c6f1f9');
+  faceGrad.addColorStop(1, '#82d6e8');
+  c.fillStyle = faceGrad;
+  c.beginPath();
+  c.moveTo(cx - 32, faceY - 8);
+  c.bezierCurveTo(cx - 33, faceY + 14, cx - 18, faceY + 32, cx, faceY + 35);
+  c.bezierCurveTo(cx + 18, faceY + 32, cx + 33, faceY + 14, cx + 32, faceY - 8);
+  c.bezierCurveTo(cx + 32, faceY - 32, cx - 32, faceY - 32, cx - 32, faceY - 8);
+  c.closePath();
+  c.fill();
+  c.strokeStyle = '#278ea5';
+  c.lineWidth = 1.4;
+  c.stroke();
+
+  // Soft Peach-Rose Cheek Blush
+  for (const side of [-1, 1]) {
+    const bGrad = c.createRadialGradient(cx + side * 19, faceY + 12, 1, cx + side * 19, faceY + 12, 11);
+    bGrad.addColorStop(0, 'rgba(244, 114, 182, 0.55)');
+    bGrad.addColorStop(1, 'rgba(244, 114, 182, 0)');
+    c.fillStyle = bGrad;
+    c.beginPath();
+    c.arc(cx + side * 19, faceY + 12, 11, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 5. Realistic Expressive Sapphire-Teal Eyes with Eyelashes & Starry Catchlights
+  const eyeY = faceY + 2;
+  for (const side of [-1, 1]) {
+    const ex = cx + side * 14.5;
+
+    // Crisp white sclera
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.ellipse(ex, eyeY, 8.2, 6.8, side * 0.05, 0, Math.PI * 2);
+    c.fill();
+
+    // Multi-layered Sapphire-Brown-Teal Iris
+    const irisGrad = c.createLinearGradient(ex, eyeY - 6, ex, eyeY + 6);
+    irisGrad.addColorStop(0, '#1e293b');
+    irisGrad.addColorStop(0.45, '#0e7490');
+    irisGrad.addColorStop(1, '#38bdf8');
+    c.fillStyle = irisGrad;
+    c.beginPath();
+    c.arc(ex - side * 0.6, eyeY + 0.5, 5.4, 0, Math.PI * 2);
+    c.fill();
+
+    // Deep Pupil
+    c.fillStyle = '#090d16';
+    c.beginPath();
+    c.arc(ex - side * 0.6, eyeY + 0.5, 2.6, 0, Math.PI * 2);
+    c.fill();
+
+    // Dual Corneal Catchlights
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.arc(ex - 2.2, eyeY - 2.0, 2.0, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(ex + 1.8, eyeY + 2.2, 1.0, 0, Math.PI * 2);
+    c.fill();
+
+    // Realistic Curved Upper Eyelash Line & Wing
+    c.strokeStyle = '#1e1b18';
+    c.lineWidth = 2.2;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.arc(ex, eyeY + 1.2, 8.4, Math.PI * 1.12, Math.PI * 1.88);
+    c.stroke();
+
+    // Delicate Eyebrow
+    c.strokeStyle = '#16697a';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(ex, eyeY - 3.5, 9.5, Math.PI * 1.2, Math.PI * 1.8);
+    c.stroke();
+  }
+
+  // Delicate Nose Bridge & Nostril Hint
+  c.strokeStyle = '#3898ad';
+  c.lineWidth = 1.2;
+  c.beginPath();
+  c.moveTo(cx - 0.5, faceY + 5);
+  c.lineTo(cx - 1.5, faceY + 12);
+  c.lineTo(cx + 1.2, faceY + 13);
+  c.stroke();
+
+  // Serene Coral-Rose Lips
+  const lipY = faceY + 21;
+  c.fillStyle = '#e15b64';
+  c.beginPath();
+  c.moveTo(cx - 7, lipY);
+  c.quadraticCurveTo(cx - 3, lipY - 2.5, cx, lipY - 1);
+  c.quadraticCurveTo(cx + 3, lipY - 2.5, cx + 7, lipY);
+  c.quadraticCurveTo(cx, lipY + 4.5, cx - 7, lipY);
+  c.closePath();
+  c.fill();
+  // Lower lip gloss
+  c.fillStyle = 'rgba(255, 255, 255, 0.65)';
+  c.beginPath();
+  c.ellipse(cx, lipY + 1.2, 2.8, 0.9, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // 6. Front Sculpted Bangs, Side Hair Locks & Golden Water-Crest Crown
+  const bangGrad = c.createLinearGradient(cx, h * 0.08, cx, h * 0.34);
+  bangGrad.addColorStop(0, '#bcebf5');
+  bangGrad.addColorStop(0.45, '#64c5da');
+  bangGrad.addColorStop(1, '#278ea5');
+  c.fillStyle = bangGrad;
+  c.strokeStyle = '#16697a';
+  c.lineWidth = 1.3;
+
+  // Sweeping side locks framing the face
+  for (const side of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(cx + side * 6, h * 0.13);
+    c.bezierCurveTo(
+      cx + side * 32,
+      h * 0.14,
+      cx + side * 42,
+      h * 0.32,
+      cx + side * 30,
+      h * 0.54
+    );
+    c.quadraticCurveTo(cx + side * 22, h * 0.38, cx + side * 26, h * 0.24);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  }
+
+  // Layered feathered front bangs
+  c.beginPath();
+  c.moveTo(cx - 28, h * 0.22);
+  c.quadraticCurveTo(cx - 18, h * 0.11, cx, h * 0.11);
+  c.quadraticCurveTo(cx + 18, h * 0.11, cx + 28, h * 0.22);
+  c.quadraticCurveTo(cx + 16, h * 0.18, cx + 10, h * 0.24);
+  c.quadraticCurveTo(cx + 3, h * 0.17, cx, h * 0.23);
+  c.quadraticCurveTo(cx - 5, h * 0.17, cx - 12, h * 0.24);
+  c.quadraticCurveTo(cx - 20, h * 0.18, cx - 28, h * 0.22);
+  c.closePath();
+  c.fill();
+  c.stroke();
+
+  // Ornate Golden Water-Drop Hairpin / Tiara Crest on Top of Head
+  c.fillStyle = '#f3e3a8';
+  c.strokeStyle = '#856823';
+  c.lineWidth = 1.4;
+  c.beginPath();
+  c.moveTo(cx - 16, h * 0.12);
+  c.quadraticCurveTo(cx, h * 0.06, cx + 16, h * 0.12);
+  c.quadraticCurveTo(cx, h * 0.10, cx - 16, h * 0.12);
+  c.fill();
+  c.stroke();
+
+  // Flowing water-crest plume on crown
+  const crestGrad = c.createLinearGradient(cx, h * 0.01, cx, h * 0.11);
+  crestGrad.addColorStop(0, '#ffffff');
+  crestGrad.addColorStop(0.5, '#8adaea');
+  crestGrad.addColorStop(1, '#278ea5');
+  c.fillStyle = crestGrad;
+  c.beginPath();
+  c.moveTo(cx, h * 0.11);
+  c.bezierCurveTo(cx - 14, h * 0.06, cx - 10, h * 0.01, cx - 2, h * 0.02);
+  c.bezierCurveTo(cx + 8, h * 0.03, cx + 10, h * 0.08, cx, h * 0.11);
+  c.fill();
+  c.stroke();
+
+  c.restore();
+  waterSpiritCanvasCache = canvas;
+  return canvas;
 }
 
 /**
- * Draw 米多力 (Midori - Divine Clean River Spirit in Colored-Pencil Style)
+ * Draw 米多力 (Midori - High-Detail Realistic Divine River Spirit)
  */
 export function drawMidori(
   ctx: CanvasRenderingContext2D,
@@ -579,145 +1157,127 @@ export function drawMidori(
   ctx.save();
   ctx.translate(Math.floor(centerX), Math.floor(bottomY));
 
-  // Mirror horizontally based on movement direction
   if (flipX) {
     ctx.scale(-1, 1);
   }
 
-  const bob = isMoving ? Math.sin(walkCycle * 10) * 4 : Math.sin(walkCycle * 4) * 2;
-  const squash = isMoving ? 1 + Math.sin(walkCycle * 10) * 0.05 : 1;
+  const bob = isMoving ? Math.sin(walkCycle * 10) * 4 : Math.sin(walkCycle * 4) * 2.2;
+  const squash = isMoving ? 1 + Math.sin(walkCycle * 10) * 0.035 : 1;
 
-  // Hand-drawn colored-pencil aqua halo rings
-  ctx.strokeStyle = 'rgba(70, 176, 199, 0.45)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([5, 4]);
+  // 1. Luminous Multi-Ring Divine Aqua Halo & Water Lotus Aura
+  const auraGrad = ctx.createRadialGradient(
+    0,
+    -baseHeight * 0.54 + bob,
+    baseWidth * 0.1,
+    0,
+    -baseHeight * 0.54 + bob,
+    baseWidth * 0.82
+  );
+  auraGrad.addColorStop(0, 'rgba(186, 230, 253, 0.55)');
+  auraGrad.addColorStop(0.55, 'rgba(56, 189, 248, 0.24)');
+  auraGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+  ctx.fillStyle = auraGrad;
   ctx.beginPath();
-  ctx.arc(0, -baseHeight * 0.52 + bob, baseWidth * 0.62, 0, Math.PI * 2);
+  ctx.arc(0, -baseHeight * 0.54 + bob, baseWidth * 0.82, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rotating golden-aqua celestial halo ring
+  ctx.save();
+  ctx.translate(0, -baseHeight * 0.56 + bob);
+  ctx.rotate(walkCycle * 0.8);
+  ctx.strokeStyle = 'rgba(125, 211, 252, 0.58)';
+  ctx.lineWidth = 1.6;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.arc(0, 0, baseWidth * 0.62, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.restore();
 
-  // Soft water aura
-  const auraGradient = ctx.createRadialGradient(
-    0,
-    -baseHeight * 0.5 + bob,
-    baseWidth * 0.15,
-    0,
-    -baseHeight * 0.5 + bob,
-    baseWidth * 0.72
-  );
-  auraGradient.addColorStop(0, 'rgba(138, 218, 234, 0.5)');
-  auraGradient.addColorStop(0.6, 'rgba(69, 176, 199, 0.22)');
-  auraGradient.addColorStop(1, 'rgba(188, 235, 245, 0)');
-  ctx.fillStyle = auraGradient;
+  // Water surface reflection & concentric ripple rings under Midori
+  ctx.strokeStyle = 'rgba(186, 230, 253, 0.72)';
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.arc(0, -baseHeight * 0.5 + bob, baseWidth * 0.75, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Shadow under Midori
-  ctx.fillStyle = 'rgba(22, 105, 122, 0.32)';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, baseWidth * 0.42, 5.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.ellipse(0, 1, baseWidth * (0.48 + Math.sin(walkCycle * 6) * 0.04), 5.5, 0, 0, Math.PI * 2);
+  ctx.stroke();
 
   const spriteCanvas = getWaterSpiritCanvas();
   if (spriteCanvas) {
-    const drawW = baseWidth * squash;
-    const drawH = baseHeight / squash;
+    const drawW = baseWidth * 1.15 * squash;
+    const drawH = (baseHeight * 1.22) / squash;
     const drawX = -drawW / 2;
-    const drawY = -drawH + bob;
+    const drawY = -drawH + bob + 2;
 
     const prevSmooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-    // Exaggerated Joyful Divine Water Absorption Mouth (米多力歡樂大嘴吸入淨化)
+    // Exaggerated Realistic Divine Water Purification Expression (米多力寫實淨化吸入動作)
     if (isCatching) {
-      // 1. Cheek blush
-      ctx.fillStyle = 'rgba(244, 114, 182, 0.75)';
-      ctx.beginPath();
-      ctx.ellipse(-drawW * 0.30, drawY + drawH * 0.44, drawW * 0.07, drawH * 0.04, 0, 0, Math.PI * 2);
-      ctx.ellipse(drawW * 0.30, drawY + drawH * 0.44, drawW * 0.07, drawH * 0.04, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 2. Joyful arched eyes (^ ^)
-      ctx.save();
-      ctx.strokeStyle = '#16697a';
-      ctx.lineWidth = 2.4;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(-drawW * 0.18, drawY + drawH * 0.38, drawW * 0.09, Math.PI * 1.15, Math.PI * 1.85);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(drawW * 0.18, drawY + drawH * 0.38, drawW * 0.09, Math.PI * 1.15, Math.PI * 1.85);
-      ctx.stroke();
-      ctx.restore();
-
-      // 3. GIANT JOYFUL MOUTH (歡樂大口吞噬淨化)
       const mouthX = 0;
-      const mouthY = drawY + drawH * 0.54;
-      const mouthRx = drawW * 0.25; // 50% width of spirit!
-      const mouthRy = drawH * 0.16;
+      const mouthY = drawY + drawH * 0.39;
+      const mouthRx = drawW * 0.16;
+      const mouthRy = drawH * 0.10;
 
       ctx.save();
-      ctx.fillStyle = '#b91c1c';
-      ctx.strokeStyle = '#164e63';
-      ctx.lineWidth = 2.4;
+      // Shaded joyful open mouth
+      const mGrad = ctx.createRadialGradient(mouthX, mouthY, 1, mouthX, mouthY, mouthRx);
+      mGrad.addColorStop(0, '#881337');
+      mGrad.addColorStop(1, '#be123c');
+      ctx.fillStyle = mGrad;
+      ctx.strokeStyle = '#9f1239';
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      // Clip inside mouth
       ctx.save();
       ctx.beginPath();
       ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
       ctx.clip();
 
-      // Upper cute teeth
+      // Pearly upper teeth row
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(mouthX - mouthRx * 0.35, mouthY - mouthRy, mouthRx * 0.7, mouthRy * 0.45);
+      ctx.fillRect(mouthX - mouthRx * 0.65, mouthY - mouthRy, mouthRx * 1.3, mouthRy * 0.42);
 
-      // Pink joyful tongue
-      ctx.fillStyle = '#f472b6';
-      ctx.strokeStyle = '#db2777';
-      ctx.lineWidth = 1;
+      // Glossy rose tongue
+      ctx.fillStyle = '#fb7185';
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY + mouthRy * 0.4, mouthRx * 0.7, mouthRy * 0.6, 0, 0, Math.PI * 2);
+      ctx.ellipse(mouthX, mouthY + mouthRy * 0.45, mouthRx * 0.72, mouthRy * 0.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
-      ctx.restore(); // restore clip
-      ctx.restore(); // restore mouth
+      ctx.restore();
 
-      // 4. Divine Water Suction Spirals & Sparkles
-      ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.6;
-      ctx.setLineDash([3, 2]);
+      // Swirling 3D Refractive Water Vortex Rings
+      ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 3]);
       ctx.beginPath();
-      ctx.arc(mouthX, mouthY, mouthRx * 1.4, 0, Math.PI * 2);
+      ctx.arc(mouthX, mouthY, mouthRx * 1.6, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(mouthX, mouthY, mouthRx * 1.9, 0, Math.PI * 2);
+      ctx.arc(mouthX, mouthY, mouthRx * 2.3, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
-
-      ctx.fillStyle = '#bcebf5';
-      ctx.fillRect(-drawW * 0.45, mouthY - 10, 4, 4);
-      ctx.fillRect(drawW * 0.45, mouthY - 10, 4, 4);
-      ctx.fillRect(0, drawY - 10, 5, 5);
       ctx.restore();
     }
     ctx.imageSmoothingEnabled = prevSmooth;
   }
 
-  // Sketchy colored-pencil water sparkles
-  ctx.strokeStyle = '#278ea5';
-  ctx.fillStyle = '#bcebf5';
-  const p1 = Math.sin(walkCycle * 8) * 10;
-  const p2 = Math.cos(walkCycle * 7) * 10;
-  ctx.fillRect(-baseWidth * 0.46 + p1, -baseHeight * 0.62, 4, 4);
-  ctx.fillRect(baseWidth * 0.44 - p2, -baseHeight * 0.42, 4, 4);
-  ctx.fillRect(0, -baseHeight - 5 + p1, 4, 4);
+  // Orbiting 3D Refractive Water Orbs around Midori
+  for (let i = 0; i < 3; i++) {
+    const ang = walkCycle * 4 + (i * Math.PI * 2) / 3;
+    const ox = Math.cos(ang) * (baseWidth * 0.52);
+    const oy = -baseHeight * 0.52 + Math.sin(ang * 1.5) * (baseHeight * 0.24) + bob;
+    ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
+    ctx.beginPath();
+    ctx.arc(ox, oy, 3.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(ox - 1.2, oy - 1.2, 1.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -970,188 +1530,1135 @@ export function drawRaindrop(
 }
 
 /**
- * Draw Pedestrians on the Bridge (with sketchy pencil outlines)
+ * Helper to draw a realistic 3D-shaded translucent glossy balloon with string
  */
+function drawRealisticBalloon(
+  ctx: CanvasRenderingContext2D,
+  handX: number,
+  handY: number,
+  bx: number,
+  by: number,
+  rx: number,
+  ry: number,
+  color: string
+) {
+  ctx.save();
+  // Swaying twine string
+  ctx.strokeStyle = 'rgba(71, 85, 105, 0.85)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(handX, handY);
+  ctx.bezierCurveTo(
+    handX + (bx - handX) * 0.3,
+    handY - (handY - by) * 0.45,
+    bx - 3,
+    by + ry + 10,
+    bx,
+    by + ry + 2
+  );
+  ctx.stroke();
+
+  // Balloon rubber knot at base
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(bx, by + ry - 1);
+  ctx.lineTo(bx - 2.5, by + ry + 3);
+  ctx.lineTo(bx + 2.5, by + ry + 3);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3D Volumetric Balloon Body
+  ctx.beginPath();
+  ctx.ellipse(bx, by, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // Radial 3D shading overlay
+  const shadeGrad = ctx.createRadialGradient(bx - rx * 0.35, by - ry * 0.35, rx * 0.1, bx, by, ry * 1.1);
+  shadeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+  shadeGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0)');
+  shadeGrad.addColorStop(0.82, 'rgba(0, 0, 0, 0.22)');
+  shadeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.42)');
+  ctx.fillStyle = shadeGrad;
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(30, 20, 15, 0.55)';
+  ctx.lineWidth = 1.0;
+  ctx.stroke();
+
+  // Crisp glossy window specular highlight
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.beginPath();
+  ctx.ellipse(bx - rx * 0.36, by - ry * 0.36, rx * 0.22, ry * 0.14, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 /**
- * Draw Pedestrians on the Bridge (Enlarged with rich colored-pencil details)
+ * Helper to draw an articulated 2-segment human leg (thigh + calf + detailed footwear)
+ */
+function drawRealisticHumanLeg(
+  ctx: CanvasRenderingContext2D,
+  hipX: number,
+  hipY: number,
+  thighLen: number,
+  calfLen: number,
+  hipAngle: number,
+  kneeBend: number,
+  pantsColor: string,
+  shoeColor: string,
+  soleColor: string,
+  legWidth: number,
+  isShorts: boolean = false,
+  skinColor: string = '#f1c29b'
+) {
+  const kneeX = hipX + Math.sin(hipAngle) * thighLen;
+  const kneeY = hipY + Math.cos(hipAngle) * thighLen;
+  const calfAngle = hipAngle - kneeBend;
+  const ankleX = kneeX + Math.sin(calfAngle) * calfLen;
+  const ankleY = kneeY + Math.cos(calfAngle) * calfLen;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (isShorts) {
+    // Exposed lower leg skin
+    ctx.strokeStyle = skinColor;
+    ctx.lineWidth = legWidth * 0.78;
+    ctx.beginPath();
+    ctx.moveTo(kneeX, kneeY);
+    ctx.lineTo(ankleX, ankleY);
+    ctx.stroke();
+
+    // Crew sock
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = legWidth * 0.82;
+    ctx.beginPath();
+    ctx.moveTo(kneeX + (ankleX - kneeX) * 0.55, kneeY + (ankleY - kneeY) * 0.55);
+    ctx.lineTo(ankleX, ankleY);
+    ctx.stroke();
+
+    // Shorts thigh segment
+    ctx.strokeStyle = pantsColor;
+    ctx.lineWidth = legWidth * 1.12;
+    ctx.beginPath();
+    ctx.moveTo(hipX, hipY);
+    ctx.lineTo(kneeX, kneeY);
+    ctx.stroke();
+  } else {
+    // Full tailored trouser leg (thigh -> knee -> ankle)
+    ctx.strokeStyle = pantsColor;
+    ctx.lineWidth = legWidth;
+    ctx.beginPath();
+    ctx.moveTo(hipX, hipY);
+    ctx.lineTo(kneeX, kneeY);
+    ctx.lineTo(ankleX, ankleY);
+    ctx.stroke();
+
+    // Subtle fabric crease highlight along front of thigh
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(hipX + 1, hipY);
+    ctx.lineTo(kneeX + 1, kneeY);
+    ctx.stroke();
+  }
+
+  // Detailed Realistic Shoe / Sneaker at Ankle
+  ctx.save();
+  ctx.translate(ankleX, ankleY);
+  ctx.rotate(-calfAngle * 0.35);
+
+  // Shoe upper
+  ctx.fillStyle = shoeColor;
+  ctx.strokeStyle = '#1c1917';
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  ctx.moveTo(-legWidth * 0.45, -2);
+  ctx.lineTo(legWidth * 0.45, -2.5);
+  ctx.quadraticCurveTo(legWidth * 1.25, -1, legWidth * 1.35, 2.2);
+  ctx.lineTo(-legWidth * 0.5, 2.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Shoe outsole & heel
+  ctx.fillStyle = soleColor;
+  ctx.fillRect(-legWidth * 0.5, 1.5, legWidth * 1.85, 1.8);
+
+  ctx.restore();
+  ctx.restore();
+}
+
+/**
+ * Helper to draw an articulated 2-segment human arm (upper arm + forearm + realistic hand)
+ */
+function drawRealisticHumanArm(
+  ctx: CanvasRenderingContext2D,
+  shoulderX: number,
+  shoulderY: number,
+  upperLen: number,
+  foreLen: number,
+  shoulderAngle: number,
+  elbowFlex: number,
+  sleeveColor: string,
+  skinColor: string,
+  armWidth: number,
+  shortSleeve: boolean = false
+): { handX: number; handY: number } {
+  const elbowX = shoulderX + Math.sin(shoulderAngle) * upperLen;
+  const elbowY = shoulderY + Math.cos(shoulderAngle) * upperLen;
+  const foreAngle = shoulderAngle + elbowFlex;
+  const handX = elbowX + Math.sin(foreAngle) * foreLen;
+  const handY = elbowY + Math.cos(foreAngle) * foreLen;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (shortSleeve) {
+    // Bare forearm
+    ctx.strokeStyle = skinColor;
+    ctx.lineWidth = armWidth * 0.78;
+    ctx.beginPath();
+    ctx.moveTo(elbowX, elbowY);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    // Upper sleeve
+    ctx.strokeStyle = sleeveColor;
+    ctx.lineWidth = armWidth * 1.05;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    ctx.lineTo(elbowX, elbowY);
+    ctx.stroke();
+  } else {
+    // Full sleeve
+    ctx.strokeStyle = sleeveColor;
+    ctx.lineWidth = armWidth;
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    ctx.lineTo(elbowX, elbowY);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+  }
+
+  // Realistic Hand with thumb & fingers contour
+  ctx.fillStyle = skinColor;
+  ctx.strokeStyle = 'rgba(60, 35, 20, 0.55)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(handX, handY, armWidth * 0.48, armWidth * 0.38, -foreAngle, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+  return { handX, handY };
+}
+
+/**
+ * Helper to draw a realistic side-profile / 3/4 human head with facial anatomy
+ */
+function drawRealisticHumanHead(
+  ctx: CanvasRenderingContext2D,
+  hx: number,
+  hy: number,
+  radius: number,
+  skinBase: string,
+  skinShade: string,
+  hairColor: string,
+  hairStyle: 'parted' | 'tousled' | 'child_cap' | 'elder' | 'vendor_cap',
+  capColor: string = '#dc2626',
+  hasGlasses: boolean = false,
+  hasHeadphones: boolean = false
+) {
+  ctx.save();
+  ctx.translate(hx, hy);
+
+  // 1. Neck with sternocleidomastoid shadow
+  ctx.fillStyle = skinShade;
+  ctx.beginPath();
+  ctx.roundRect(-radius * 0.38, radius * 0.65, radius * 0.72, radius * 0.75, 2);
+  ctx.fill();
+
+  // 2. Sculpted Cranium & Jawline with 3D Skin Gradient
+  const headGrad = ctx.createRadialGradient(radius * 0.25, -radius * 0.1, radius * 0.1, 0, 0, radius * 1.2);
+  headGrad.addColorStop(0, skinBase);
+  headGrad.addColorStop(1, skinShade);
+  ctx.fillStyle = headGrad;
+  ctx.strokeStyle = 'rgba(65, 38, 22, 0.65)';
+  ctx.lineWidth = 0.9;
+
+  ctx.beginPath();
+  // Cranium -> forehead -> nose bridge -> nose tip -> philtrum/lips -> chin -> jawline -> back of head
+  ctx.moveTo(-radius * 0.88, -radius * 0.2);
+  ctx.bezierCurveTo(-radius * 0.92, -radius * 1.05, radius * 0.82, -radius * 1.05, radius * 0.90, -radius * 0.25);
+  // Sculpted nose protrusion
+  ctx.lineTo(radius * 1.12, radius * 0.08);
+  ctx.lineTo(radius * 0.92, radius * 0.20);
+  // Lips & Chin
+  ctx.quadraticCurveTo(radius * 0.96, radius * 0.55, radius * 0.62, radius * 0.88);
+  ctx.quadraticCurveTo(0, radius * 0.96, -radius * 0.58, radius * 0.68);
+  ctx.quadraticCurveTo(-radius * 0.90, radius * 0.35, -radius * 0.88, -radius * 0.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Subtle warm cheek blush
+  ctx.fillStyle = 'rgba(239, 100, 100, 0.26)';
+  ctx.beginPath();
+  ctx.arc(radius * 0.42, radius * 0.28, radius * 0.28, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3. Realistic Eye (Sclera, Iris, Pupil, Upper Lashes & Eyebrow)
+  const ex = radius * 0.48;
+  const ey = -radius * 0.08;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(ex, ey, radius * 0.22, radius * 0.15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#1e1b18';
+  ctx.beginPath();
+  ctx.arc(ex + radius * 0.05, ey, radius * 0.11, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye catchlight
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(ex + radius * 0.02, ey - radius * 0.04, radius * 0.045, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Upper eyelid & eyebrow
+  ctx.strokeStyle = '#292018';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(ex - radius * 0.22, ey - radius * 0.05);
+  ctx.quadraticCurveTo(ex, ey - radius * 0.20, ex + radius * 0.24, ey - radius * 0.04);
+  ctx.stroke();
+
+  ctx.strokeStyle = hairColor;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(ex - radius * 0.24, ey - radius * 0.28);
+  ctx.quadraticCurveTo(ex + radius * 0.05, ey - radius * 0.38, ex + radius * 0.28, ey - radius * 0.24);
+  ctx.stroke();
+
+  // Mouth line
+  ctx.strokeStyle = 'rgba(140, 65, 55, 0.85)';
+  ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  ctx.moveTo(radius * 0.55, radius * 0.46);
+  ctx.quadraticCurveTo(radius * 0.72, radius * 0.50, radius * 0.88, radius * 0.44);
+  ctx.stroke();
+
+  // Glasses (for Elder)
+  if (hasGlasses) {
+    ctx.strokeStyle = '#d97706';
+    ctx.fillStyle = 'rgba(224, 242, 254, 0.35)';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(ex + radius * 0.04, ey, radius * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ex - radius * 0.22, ey);
+    ctx.lineTo(-radius * 0.2, ey - radius * 0.05);
+    ctx.stroke();
+  }
+
+  // 4. Ear with inner helix shadow
+  ctx.fillStyle = skinBase;
+  ctx.strokeStyle = 'rgba(65, 38, 22, 0.6)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(-radius * 0.18, radius * 0.08, radius * 0.18, radius * 0.26, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // 5. Detailed Sculpted Hairstyles & Headwear
+  ctx.fillStyle = hairColor;
+  ctx.strokeStyle = '#1c1917';
+  ctx.lineWidth = 0.9;
+
+  if (hairStyle === 'parted') {
+    // Layered side-parted hair with realistic volume and temple taper
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.94, radius * 0.28);
+    ctx.bezierCurveTo(-radius * 1.12, -radius * 0.55, -radius * 0.65, -radius * 1.25, radius * 0.15, -radius * 1.18);
+    ctx.bezierCurveTo(radius * 0.85, -radius * 1.15, radius * 1.12, -radius * 0.65, radius * 0.95, -radius * 0.32);
+    ctx.quadraticCurveTo(radius * 0.35, -radius * 0.55, -radius * 0.08, -radius * 0.28);
+    ctx.lineTo(-radius * 0.18, radius * 0.08);
+    ctx.quadraticCurveTo(-radius * 0.45, -radius * 0.10, -radius * 0.62, radius * 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Glossy hair strand highlights
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, -radius * 0.35, radius * 0.68, Math.PI * 1.15, Math.PI * 1.75);
+    ctx.stroke();
+  } else if (hairStyle === 'tousled') {
+    // Textured tousled youth hair
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.95, radius * 0.25);
+    ctx.bezierCurveTo(-radius * 1.18, -radius * 0.65, -radius * 0.55, -radius * 1.32, radius * 0.22, -radius * 1.24);
+    ctx.bezierCurveTo(radius * 0.95, -radius * 1.18, radius * 1.22, -radius * 0.55, radius * 1.05, -radius * 0.22);
+    ctx.quadraticCurveTo(radius * 0.55, -radius * 0.42, radius * 0.12, -radius * 0.25);
+    ctx.quadraticCurveTo(-radius * 0.35, -radius * 0.45, -radius * 0.68, radius * 0.32);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (hairStyle === 'elder') {
+    // Neatly combed silver hair at sides & back + mustache
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.92, radius * 0.32);
+    ctx.bezierCurveTo(-radius * 1.08, -radius * 0.45, -radius * 0.55, -radius * 1.05, radius * 0.25, -radius * 0.98);
+    ctx.quadraticCurveTo(-radius * 0.15, -radius * 0.65, -radius * 0.32, -radius * 0.05);
+    ctx.lineTo(-radius * 0.62, radius * 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Silver mustache
+    ctx.beginPath();
+    ctx.ellipse(radius * 0.74, radius * 0.35, radius * 0.26, radius * 0.11, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (hairStyle === 'child_cap') {
+    // Soft hair locks under baseball cap
+    ctx.beginPath();
+    ctx.arc(-radius * 0.35, -radius * 0.1, radius * 0.62, Math.PI * 0.6, Math.PI * 1.5);
+    ctx.fill();
+
+    // Fitted Baseball Cap Dome
+    ctx.fillStyle = capColor;
+    ctx.beginPath();
+    ctx.arc(0, -radius * 0.25, radius * 0.96, Math.PI * 0.95, Math.PI * 2.02);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Curved Cap Visor Brim
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.moveTo(radius * 0.65, -radius * 0.35);
+    ctx.quadraticCurveTo(radius * 1.55, -radius * 0.38, radius * 1.62, -radius * 0.15);
+    ctx.quadraticCurveTo(radius * 1.15, -radius * 0.18, radius * 0.55, -radius * 0.22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else if (hairStyle === 'vendor_cap') {
+    // Vintage Tweed Flat Cap (報童帽)
+    ctx.beginPath();
+    ctx.arc(-radius * 0.35, 0, radius * 0.62, Math.PI * 0.65, Math.PI * 1.4);
+    ctx.fill();
+
+    ctx.fillStyle = '#57534e';
+    ctx.beginPath();
+    ctx.moveTo(-radius * 1.02, -radius * 0.28);
+    ctx.bezierCurveTo(-radius * 0.95, -radius * 1.18, radius * 0.75, -radius * 1.15, radius * 1.25, -radius * 0.32);
+    ctx.quadraticCurveTo(radius * 1.52, -radius * 0.22, radius * 1.45, -radius * 0.12);
+    ctx.lineTo(-radius * 0.95, -radius * 0.18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Studio Over-Ear Headphones (for Teen)
+  if (hasHeadphones) {
+    // Headband arch
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(-radius * 0.08, -radius * 0.15, radius * 1.02, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+
+    // Padded 3D Earcup over ear
+    ctx.fillStyle = '#0284c7';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.ellipse(-radius * 0.15, radius * 0.06, radius * 0.32, radius * 0.42, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = '#bae6fd';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(-radius * 0.15, radius * 0.06, radius * 0.16, radius * 0.24, -0.1, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draw Pedestrians on the Bridge (High-Definition Realistic Articulated Figures & Animals)
  */
 export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
   ctx.save();
   ctx.translate(Math.floor(p.x), Math.floor(p.y));
-  // Enlarged 2.3x for prominent, lively bridge street life (matches user request)
-  ctx.scale(p.direction * 2.3, 2.3);
+  // Flip horizontally according to walking direction
+  ctx.scale(p.direction, 1);
 
-  const bob = Math.sin(p.walkFrame * 8) * 1.8;
-  const legSwing = Math.sin(p.walkFrame * 8) * 3.5;
-  ctx.strokeStyle = '#26201b';
-  ctx.lineWidth = 0.9;
+  const phase = p.walkFrame * 7.5;
+  const stride = Math.sin(phase);
+  const counterStride = -stride;
+  const bob = Math.abs(Math.cos(phase)) * 2.2;
+
+  // Natural knee flexion during forward/backward leg swing
+  const frontKnee = Math.max(0, Math.cos(phase)) * 0.42 + 0.08;
+  const backKnee = Math.max(0, -Math.cos(phase)) * 0.42 + 0.08;
+
+  // Contact shadow on bridge deck
+  const drawGroundShadow = (rx: number, ox: number = 0) => {
+    const shGrad = ctx.createRadialGradient(ox, 1, 2, ox, 1, rx);
+    shGrad.addColorStop(0, 'rgba(20, 14, 8, 0.48)');
+    shGrad.addColorStop(1, 'rgba(20, 14, 8, 0)');
+    ctx.fillStyle = shGrad;
+    ctx.beginPath();
+    ctx.ellipse(ox, 1, rx, 4.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  };
 
   switch (p.type) {
+    // 1. 寫實復古木製攤車與職人攤販 (Artisan Street Vendor pushing Vintage Wooden Cart)
     case 'cart': {
-      // Little snack / souvenir wagon cart on wheels with festive floating balloon
-      const cartBob = Math.sin(p.walkFrame * 6) * 1.2;
-      // Wooden cart chest
-      ctx.fillStyle = '#b45309';
-      ctx.fillRect(-14, -14 + cartBob, 28, 11);
-      ctx.strokeRect(-14, -14 + cartBob, 28, 11);
-      // Striped awning / package top
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-12, -22 + cartBob, 24, 8);
-      ctx.strokeRect(-12, -22 + cartBob, 24, 8);
-      ctx.fillStyle = '#fef08a';
-      ctx.fillRect(-7, -20 + cartBob, 5, 5);
-      ctx.fillRect(2, -20 + cartBob, 5, 5);
-      // Spoked wheels
-      ctx.fillStyle = '#451a03';
+      drawGroundShadow(36, 4);
+      const cartBob = Math.sin(phase * 1.2) * 0.9;
+
+      // --- A. Realistic Vendor Figure Walking Behind Cart (x ≈ -24) ---
+      const vx = -24;
+      const hipY = -22 - bob * 0.8;
+      const shoulderY = -42 - bob * 0.8;
+
+      // Back Leg
+      drawRealisticHumanLeg(ctx, vx - 1, hipY, 11, 10, counterStride * 0.42, backKnee, '#1e293b', '#451a03', '#1c1917', 5.2);
+      // Back Arm reaching to cart handle
+      drawRealisticHumanArm(ctx, vx + 1, shoulderY + 2, 9, 9, 0.55, 0.55, '#f8fafc', '#e6b891', 4.4);
+
+      // Vendor Torso (White rolled-sleeve shirt + Barista/Artisan Canvas Apron)
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.0;
       ctx.beginPath();
-      ctx.arc(-8, -3, 4, 0, Math.PI * 2);
-      ctx.arc(8, -3, 4, 0, Math.PI * 2);
+      ctx.roundRect(vx - 6, shoulderY, 12, 21, 4);
       ctx.fill();
       ctx.stroke();
-      // Cart handle
-      ctx.strokeStyle = '#292524';
-      ctx.lineWidth = 0.9;
-      ctx.beginPath();
-      ctx.moveTo(-14, -12 + cartBob);
-      ctx.lineTo(-20, -18 + cartBob);
-      ctx.stroke();
-      // Floating festive balloon tied to cart
-      if (p.balloonColor) {
-        ctx.strokeStyle = '#57534e';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(8, -22 + cartBob);
-        ctx.quadraticCurveTo(12, -38 + cartBob, 10, -48 + cartBob * 0.5);
-        ctx.stroke();
-        // Balloon
-        ctx.fillStyle = p.balloonColor;
-        ctx.strokeStyle = '#26201b';
-        ctx.beginPath();
-        ctx.arc(10, -56 + cartBob * 0.5, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        // Highlight reflection
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-        ctx.beginPath();
-        ctx.arc(8, -58 + cartBob * 0.5, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      break;
-    }
 
-    case 'dog': {
-      // Golden retriever / shiba inu dog
-      ctx.fillStyle = '#c27125';
-      ctx.fillRect(-10, -10 + bob, 20, 10);
-      ctx.strokeRect(-10, -10 + bob, 20, 10);
-      ctx.fillRect(8, -16 + bob, 8, 8);
-      ctx.strokeRect(8, -16 + bob, 8, 8);
-      ctx.fillRect(16, -13 + bob, 4, 4);
-      ctx.fillStyle = '#1e1b18';
-      ctx.fillRect(19, -13 + bob, 2, 2); // nose
+      // Canvas Apron
       ctx.fillStyle = '#78350f';
-      ctx.fillRect(9, -16 + bob, 3, 5); // ear
-      // Collar
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(7, -11 + bob, 2, 6);
-      // Wagging tail
-      const tailWag = Math.sin(p.walkFrame * 14) * 3;
-      ctx.fillStyle = '#c27125';
-      ctx.fillRect(-13, -14 + bob + tailWag, 3, 6);
-      ctx.fillRect(-8 + legSwing, 0, 3, 5);
-      ctx.fillRect(4 - legSwing, 0, 3, 5);
-      break;
-    }
+      ctx.beginPath();
+      ctx.roundRect(vx - 4.5, shoulderY + 4, 9.5, 18, 2);
+      ctx.fill();
+      ctx.strokeStyle = '#451a03';
+      ctx.stroke();
 
-    case 'child': {
-      // Child holding high-flying red balloon
-      ctx.fillStyle = '#f5d0a9';
-      ctx.fillRect(-4, -22 + bob, 8, 8); // head
-      ctx.strokeRect(-4, -22 + bob, 8, 8);
-      ctx.fillStyle = '#e11d48';
-      ctx.fillRect(-5, -24 + bob, 10, 3); // hat
-      ctx.fillStyle = p.color;
-      ctx.fillRect(-4, -14 + bob, 8, 10); // coat
-      ctx.strokeRect(-4, -14 + bob, 8, 10);
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(-3 + legSwing, -4, 3, 6);
-      ctx.fillRect(1 - legSwing, -4, 3, 6);
-      // High-flying colored-pencil balloon
-      if (p.balloonColor) {
-        ctx.strokeStyle = '#57534e';
+      // Front Leg
+      drawRealisticHumanLeg(ctx, vx, hipY, 11, 10, stride * 0.42, frontKnee, '#334155', '#5c2406', '#1c1917', 5.4);
+      // Front Arm gripping cart handle
+      drawRealisticHumanArm(ctx, vx, shoulderY + 2, 9, 9, 0.48, 0.52, '#f8fafc', '#f3c6a0', 4.6, true);
+
+      // Vendor Head with Vintage Flat Cap
+      drawRealisticHumanHead(ctx, vx + 1, shoulderY - 7, 6.2, '#f5cba7', '#d9a47e', '#3b2818', 'vendor_cap');
+
+      // --- B. Artisanal Vintage Wooden Street-Food Cart (x ≈ -6 .. +34) ---
+      const cx = 14;
+      const cy = -12 + cartBob;
+
+      // Curved Iron Push Handles connected to vendor hands
+      ctx.strokeStyle = '#292524';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 18, cy - 8);
+      ctx.quadraticCurveTo(cx - 24, cy - 15, vx + 12, shoulderY + 11);
+      ctx.stroke();
+
+      // Back Spoked Wheel
+      const wheelRot = p.walkFrame * 5;
+      const drawSpokedWheel = (wx: number, wy: number, r: number, isFront: boolean) => {
+        ctx.save();
+        ctx.translate(wx, wy);
+        ctx.rotate(wheelRot);
+        // Iron outer rim & wooden wheel fellow
+        ctx.strokeStyle = isFront ? '#292524' : '#1c1917';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = isFront ? '#b45309' : '#78350f';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(0, 0, r - 1.2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 8 Wooden Spokes
+        ctx.lineWidth = 1.2;
+        for (let s = 0; s < 4; s++) {
+          const a = (s * Math.PI) / 4;
+          ctx.beginPath();
+          ctx.moveTo(-Math.cos(a) * r, -Math.sin(a) * r);
+          ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+          ctx.stroke();
+        }
+        // Brass hubcap
+        ctx.fillStyle = '#eab308';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      drawSpokedWheel(cx - 8, -9, 8.5, false);
+
+      // Mahogany Wooden Cart Body with paneled carpentry
+      const woodGrad = ctx.createLinearGradient(cx - 18, cy - 18, cx + 18, cy);
+      woodGrad.addColorStop(0, '#b45309');
+      woodGrad.addColorStop(0.5, '#92400e');
+      woodGrad.addColorStop(1, '#652b0d');
+      ctx.fillStyle = woodGrad;
+      ctx.strokeStyle = '#3b1806';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.roundRect(cx - 18, cy - 18, 36, 17, 2.5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Recessed decorative wood panels & brass corner brackets
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1.0;
+      ctx.strokeRect(cx - 14, cy - 15, 12, 11);
+      ctx.strokeRect(cx + 2, cy - 15, 12, 11);
+
+      // Glass Pastry / Snack Display Case on Countertop
+      ctx.fillStyle = 'rgba(224, 242, 254, 0.55)';
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(cx - 14, cy - 28, 28, 10);
+      ctx.strokeRect(cx - 14, cy - 28, 28, 10);
+
+      // Golden pastries/snacks inside display
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(cx - 7, cy - 21, 3, 0, Math.PI * 2);
+      ctx.arc(cx, cy - 21, 3, 0, Math.PI * 2);
+      ctx.arc(cx + 7, cy - 21, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Brass Canopy Support Poles
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(cx - 15, cy - 18);
+      ctx.lineTo(cx - 15, cy - 42);
+      ctx.moveTo(cx + 15, cy - 18);
+      ctx.lineTo(cx + 15, cy - 42);
+      ctx.stroke();
+
+      // Striped Scalloped Awning Canopy
+      const stripeCount = 6;
+      const canopyW = 38;
+      const stripeW = canopyW / stripeCount;
+      for (let i = 0; i < stripeCount; i++) {
+        ctx.fillStyle = i % 2 === 0 ? p.color : '#fffbeb';
+        const sx = cx - canopyW / 2 + i * stripeW;
+        ctx.beginPath();
+        ctx.moveTo(sx + 2, cy - 48);
+        ctx.lineTo(sx + stripeW - (i === stripeCount - 1 ? 2 : 0), cy - 48);
+        ctx.lineTo(sx + stripeW, cy - 39);
+        ctx.arc(sx + stripeW / 2, cy - 39, stripeW / 2, 0, Math.PI, false);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#451a03';
         ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(2, -10 + bob);
-        ctx.quadraticCurveTo(-2, -32 + bob, -6, -46 + bob * 0.5);
         ctx.stroke();
-        // Balloon
-        ctx.fillStyle = p.balloonColor;
-        ctx.strokeStyle = '#26201b';
-        ctx.beginPath();
-        ctx.arc(-7, -54 + bob * 0.5, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        // Highlight reflection
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-        ctx.beginPath();
-        ctx.arc(-9, -56 + bob * 0.5, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+      }
+
+      // Front Spoked Wheel
+      drawSpokedWheel(cx + 6, -9, 9.0, true);
+
+      // Festive 3D Glossy Balloon tied to front canopy pole
+      if (p.balloonColor) {
+        drawRealisticBalloon(
+          ctx,
+          cx + 15,
+          cy - 44,
+          cx + 20 + Math.sin(phase * 0.5) * 3,
+          cy - 78 + cartBob * 0.6,
+          10,
+          12.5,
+          p.balloonColor
+        );
       }
       break;
     }
 
+    // 2. 寫實柴犬 / 黃金獵犬 (Realistic Articulated Shiba Inu / Golden Retriever)
+    case 'dog': {
+      drawGroundShadow(22, 0);
+      const dogBob = Math.sin(phase * 1.6) * 1.6;
+      const trot = Math.sin(phase * 1.6);
+
+      // Helper for 2-segment canine leg + paw
+      const drawCanineLeg = (lx: number, ly: number, swing: number, isBack: boolean, furHex: string, pawHex: string) => {
+        const kneeX = lx + Math.sin(swing) * 6;
+        const kneeY = ly + 6.5;
+        const pawX = kneeX + Math.sin(swing - 0.25) * 6;
+        const pawY = 0;
+
+        ctx.save();
+        ctx.strokeStyle = furHex;
+        ctx.lineWidth = isBack ? 3.6 : 4.0;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(lx, ly);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(pawX, pawY - 1.5);
+        ctx.stroke();
+
+        // White sock & paw pad
+        ctx.fillStyle = pawHex;
+        ctx.beginPath();
+        ctx.ellipse(pawX + 1.2, pawY - 1.2, 2.8, 1.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      // Far-side legs (darker shaded tone)
+      drawCanineLeg(-10, -12 + dogBob, -trot * 0.55, true, '#9a5216', '#e7e5e4');
+      drawCanineLeg(9, -12 + dogBob, trot * 0.55, true, '#9a5216', '#e7e5e4');
+
+      // Plush Curled Wagging Tail
+      const tailWag = Math.sin(p.walkFrame * 16) * 0.25;
+      ctx.save();
+      ctx.translate(-14, -17 + dogBob);
+      ctx.rotate(tailWag);
+      ctx.fillStyle = '#d97706';
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(0, 2);
+      ctx.bezierCurveTo(-10, -4, -11, -14, -3, -14);
+      ctx.bezierCurveTo(2, -14, 3, -6, 1, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Cream inner tail tip
+      ctx.fillStyle = '#fef3c7';
+      ctx.beginPath();
+      ctx.arc(-4, -10, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Anatomical Canine Torso (Deep chest & tucked waist with dorsal-to-belly fur gradient)
+      const bodyGrad = ctx.createLinearGradient(0, -22 + dogBob, 0, -8 + dogBob);
+      bodyGrad.addColorStop(0, '#c26a1b');
+      bodyGrad.addColorStop(0.65, '#e08a38');
+      bodyGrad.addColorStop(1, '#fef3c7');
+      ctx.fillStyle = bodyGrad;
+      ctx.strokeStyle = '#5c2d0c';
+      ctx.lineWidth = 1.1;
+
+      ctx.beginPath();
+      ctx.moveTo(-14, -16 + dogBob);
+      ctx.bezierCurveTo(-8, -21 + dogBob, 6, -21 + dogBob, 13, -19 + dogBob);
+      ctx.bezierCurveTo(17, -15 + dogBob, 15, -8 + dogBob, 9, -8 + dogBob);
+      ctx.bezierCurveTo(2, -8 + dogBob, -6, -10 + dogBob, -12, -10 + dogBob);
+      ctx.quadraticCurveTo(-16, -12 + dogBob, -14, -16 + dogBob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Near-side legs (brighter sunlit tone)
+      drawCanineLeg(-9, -12 + dogBob, trot * 0.55, false, '#d97706', '#fffbeb');
+      drawCanineLeg(10, -12 + dogBob, -trot * 0.55, false, '#d97706', '#fffbeb');
+
+      // Red Leather Collar & Shiny Gold Bell at Neck
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.moveTo(9, -20 + dogBob);
+      ctx.lineTo(14, -13 + dogBob);
+      ctx.stroke();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(14.5, -12.5 + dogBob, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sculpted Canine Head, Muzzle, Urajiro Cream Cheek & Perky Ears
+      const hx = 15;
+      const hy = -23 + dogBob * 1.1;
+
+      // Back ear
+      ctx.fillStyle = '#9a5216';
+      ctx.beginPath();
+      ctx.moveTo(hx - 1, hy - 5);
+      ctx.lineTo(hx + 2, hy - 12);
+      ctx.lineTo(hx + 5, hy - 5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cranium & tapering snout
+      ctx.fillStyle = '#d97706';
+      ctx.strokeStyle = '#5c2d0c';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(hx - 6, hy - 2);
+      ctx.bezierCurveTo(hx - 6, hy - 9, hx + 5, hy - 9, hx + 7, hy - 3);
+      // Snout bridge
+      ctx.lineTo(hx + 12.5, hy - 1.5);
+      ctx.quadraticCurveTo(hx + 13, hy + 2.5, hx + 8, hy + 3.2);
+      ctx.quadraticCurveTo(hx + 2, hy + 4.5, hx - 5, hy + 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Cream Urajiro lower cheek & muzzle marking
+      ctx.fillStyle = '#fffbeb';
+      ctx.beginPath();
+      ctx.moveTo(hx + 1, hy + 0.5);
+      ctx.quadraticCurveTo(hx + 7, hy - 0.5, hx + 11.5, hy + 0.5);
+      ctx.quadraticCurveTo(hx + 8, hy + 3.5, hx + 1, hy + 3.2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Front triangular ear with pink/cream inner concha
+      ctx.fillStyle = '#c26a1b';
+      ctx.beginPath();
+      ctx.moveTo(hx - 4, hy - 4);
+      ctx.lineTo(hx - 1, hy - 12.5);
+      ctx.lineTo(hx + 3, hy - 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Wet black nose & expressive dark eye with catchlight
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.arc(hx + 12, hy - 1, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(hx + 4.8, hy - 2.5, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(hx + 4.4, hy - 3.0, 0.65, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
+    // 3. 寫實孩童與立體光澤氣球 (Realistic Child with Backpack, Cap, Puffer Vest & 3D Balloon)
+    case 'child': {
+      drawGroundShadow(13);
+      const hipY = -18 - bob;
+      const shoulderY = -34 - bob;
+
+      // Back Leg (Denim shorts + striped crew sock + sneaker)
+      drawRealisticHumanLeg(ctx, -1, hipY, 8.5, 8.5, counterStride * 0.52, backKnee, '#1d4ed8', '#dc2626', '#f8fafc', 4.6, true, '#eab68c');
+
+      // Back Arm swinging
+      drawRealisticHumanArm(ctx, -1, shoulderY + 2, 7.5, 7, counterStride * 0.45, 0.35, '#f8fafc', '#eab68c', 3.8);
+
+      // School Backpack on back
+      ctx.fillStyle = '#f59e0b';
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.roundRect(-9.5, shoulderY + 1, 6.5, 13, 2.5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Quilted Puffer Vest over Striped Shirt Torso
+      ctx.fillStyle = p.color;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.roundRect(-5.5, shoulderY, 11, 17, 3.5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Puffer vest horizontal quilt stitch lines
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.beginPath();
+      ctx.moveTo(-5, shoulderY + 5.5);
+      ctx.lineTo(5, shoulderY + 5.5);
+      ctx.moveTo(-5, shoulderY + 11);
+      ctx.lineTo(5, shoulderY + 11);
+      ctx.stroke();
+
+      // Front Leg
+      drawRealisticHumanLeg(ctx, 0.5, hipY, 8.5, 8.5, stride * 0.52, frontKnee, '#2563eb', '#ef4444', '#ffffff', 4.8, true, '#f5cba7');
+
+      // Front Arm raised holding balloon string
+      const frontHand = drawRealisticHumanArm(ctx, 0.5, shoulderY + 2, 7.5, 7.5, 0.38, 0.65, '#f8fafc', '#f5cba7', 4.0);
+
+      // Child Head with Baseball Cap
+      drawRealisticHumanHead(ctx, 0.5, shoulderY - 6.5, 6.2, '#f8d5b8', '#dfb18b', '#451a03', 'child_cap', '#e11d48');
+
+      // High-flying 3D Translucent Glossy Balloon
+      if (p.balloonColor) {
+        drawRealisticBalloon(
+          ctx,
+          frontHand.handX,
+          frontHand.handY,
+          -4 + Math.sin(phase * 0.5) * 3,
+          shoulderY - 52 + bob * 0.5,
+          10.5,
+          13,
+          p.balloonColor
+        );
+      }
+      break;
+    }
+
+    // 4. 寫實儒雅長者 (Realistic Elderly Gentleman with Glasses, Tweed Jacket, Cardigan & Crook Cane)
     case 'elder': {
-      // Elder with walking cane
-      ctx.fillStyle = '#d6d3d1';
-      ctx.fillRect(-5, -28 + bob, 8, 8);
-      ctx.strokeRect(-5, -28 + bob, 8, 8);
-      ctx.fillStyle = '#57534e';
-      ctx.fillRect(-5, -20 + bob, 10, 14);
-      ctx.strokeRect(-5, -20 + bob, 10, 14);
-      // Walking cane
-      ctx.fillStyle = '#92400e';
-      ctx.fillRect(8, -16 + bob, 2, 20);
-      ctx.fillRect(6, -18 + bob, 4, 2);
-      ctx.fillStyle = '#292524';
-      ctx.fillRect(-4 + legSwing * 0.6, -6, 3, 8);
-      ctx.fillRect(1 - legSwing * 0.6, -6, 3, 8);
+      drawGroundShadow(15, 2);
+      const elderBob = bob * 0.65;
+      const hipY = -22 - elderBob;
+      const shoulderY = -43 - elderBob;
+
+      // Back Leg (Pleated wool slacks + leather loafer)
+      drawRealisticHumanLeg(ctx, -1.5, hipY, 11, 10.5, counterStride * 0.32, backKnee * 0.7, '#44403c', '#292524', '#1c1917', 5.2);
+
+      // Back Arm
+      drawRealisticHumanArm(ctx, -1, shoulderY + 3, 9.5, 9, counterStride * 0.28, 0.3, '#57534e', '#e5c1a1', 4.4);
+
+      // Slightly stooped Tweed Jacket & Warm Burgundy/Amber Cardigan Vest
+      ctx.save();
+      ctx.translate(0, hipY);
+      ctx.rotate(0.09); // Natural gentle forward posture
+      ctx.fillStyle = '#78716c';
+      ctx.strokeStyle = '#292524';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.roundRect(-6.5, -22, 13, 23, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner warm knit sweater vest & white shirt collar
+      ctx.fillStyle = '#991b1b';
+      ctx.beginPath();
+      ctx.moveTo(1, -21);
+      ctx.lineTo(6.2, -21);
+      ctx.lineTo(6.2, -3);
+      ctx.lineTo(1, -3);
+      ctx.closePath();
+      ctx.fill();
+
+      // Jacket lapel
+      ctx.strokeStyle = '#44403c';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(1, -21);
+      ctx.lineTo(5.5, -11);
+      ctx.stroke();
+      ctx.restore();
+
+      // Front Leg
+      drawRealisticHumanLeg(ctx, 0, hipY, 11, 10.5, stride * 0.32, frontKnee * 0.7, '#57534e', '#451a03', '#1c1917', 5.5);
+
+      // Front Arm extended forward gripping carved wooden walking cane
+      const caneHand = drawRealisticHumanArm(ctx, 1.5, shoulderY + 3, 9.5, 9, 0.35 + stride * 0.12, 0.42, '#78716c', '#f1cfaec', 4.6);
+
+      // Carved Wooden Crook Cane with Brass Collar & Rubber Ferrule
+      ctx.save();
+      const caneTipX = caneHand.handX + 3.5 - stride * 2.5;
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      // Curved crook handle
+      ctx.arc(caneHand.handX - 0.5, caneHand.handY, 2.8, Math.PI, 0, false);
+      ctx.lineTo(caneTipX, -1);
+      ctx.stroke();
+      // Brass collar ring
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(caneHand.handX + 1.2, caneHand.handY + 3, 2.4, 1.8);
+      // Rubber tip
+      ctx.fillStyle = '#1c1917';
+      ctx.fillRect(caneTipX - 1.2, -2.2, 2.4, 2.2);
+      ctx.restore();
+
+      // Elder Head with Silver Hair, Mustache & Spectacles
+      drawRealisticHumanHead(ctx, 2.2, shoulderY - 6.5, 6.4, '#f3d1b3', '#d6ae8b', '#e7e5e4', 'elder', '', true, false);
       break;
     }
 
+    // 5. 寫實潮流青年 (Realistic Streetwear Youth with Studio Headphones, Hoodie, Cargo Pants & Smartphone)
     case 'teen': {
-      // Teenager with hoodie & headphones
-      ctx.fillStyle = '#fde047';
-      ctx.fillRect(-5, -28 + bob, 9, 8); // hair
-      ctx.strokeRect(-5, -28 + bob, 9, 8);
-      ctx.fillStyle = '#0284c7'; // headphones
-      ctx.fillRect(-6, -26 + bob, 2, 5);
-      ctx.fillRect(3, -26 + bob, 2, 5);
-      ctx.fillRect(-6, -29 + bob, 11, 2);
-      ctx.fillStyle = p.color; // jacket
-      ctx.fillRect(-6, -20 + bob, 12, 14);
-      ctx.strokeRect(-6, -20 + bob, 12, 14);
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(-4 + legSwing, -6, 4, 8);
-      ctx.fillRect(1 - legSwing, -4, 4, 8);
+      drawGroundShadow(15);
+      const hipY = -23 - bob;
+      const shoulderY = -45 - bob;
+
+      // Back Leg (Olive/Slate Cargo Pants + Two-Tone High-Top Sneaker)
+      drawRealisticHumanLeg(ctx, -1, hipY, 11.5, 11, counterStride * 0.48, backKnee, '#334155', '#e2e8f0', '#0284c7', 5.6);
+
+      // Back Arm swinging
+      drawRealisticHumanArm(ctx, -1, shoulderY + 2, 10, 9.5, counterStride * 0.42, 0.28, p.color, '#eab68c', 4.8);
+
+      // Layered White Undershirt Hem peeking below hoodie
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(-6.2, hipY - 2.5, 12.4, 3.5);
+
+      // Oversized Streetwear Hoodie Torso with Draped Hood, Drawstrings & Kangaroo Pocket
+      ctx.fillStyle = p.color;
+      ctx.strokeStyle = '#1e1b4b';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.roundRect(-6.8, shoulderY, 13.6, 22, 4.5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Draped hood at back of neck
+      ctx.beginPath();
+      ctx.ellipse(-4.5, shoulderY + 1, 5.2, 3.5, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Kangaroo front pocket & white drawstrings
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.moveTo(-2, hipY - 9);
+      ctx.lineTo(5.8, hipY - 9);
+      ctx.lineTo(6.4, hipY - 2);
+      ctx.lineTo(-3.5, hipY - 2);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(3.5, shoulderY + 2);
+      ctx.lineTo(4.2, shoulderY + 9);
+      ctx.moveTo(5.2, shoulderY + 2);
+      ctx.lineTo(5.8, shoulderY + 8.5);
+      ctx.stroke();
+
+      // Front Leg
+      drawRealisticHumanLeg(ctx, 0.5, hipY, 11.5, 11, stride * 0.48, frontKnee, '#475569', '#ffffff', '#ef4444', 5.8);
+
+      // Front Arm bent holding Smartphone
+      const phoneHand = drawRealisticHumanArm(ctx, 0.5, shoulderY + 3, 10, 9.5, 0.15, 0.85, p.color, '#f5cba7', 5.0);
+
+      // Sleek Smartphone with glowing screen in hand
+      ctx.save();
+      ctx.translate(phoneHand.handX + 2.2, phoneHand.handY - 2);
+      ctx.rotate(-0.45);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-1.5, -3.5, 3, 6.5);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(-0.8, -3.0, 2, 5.2);
+      ctx.restore();
+
+      // Teen Head with Tousled Hair & Over-Ear Studio Headphones
+      drawRealisticHumanHead(ctx, 0.8, shoulderY - 7, 6.4, '#f8d5b8', '#dfb18b', '#ca8a04', 'tousled', '', false, true);
       break;
     }
 
+    // 6. 寫實都市上班族 / 行人 (Realistic Commuter in Tailored Trench Coat with Briefcase & Coffee Cup)
     case 'adult':
     default: {
-      // Adult holding takeaway cup
-      ctx.fillStyle = '#44403c';
-      ctx.fillRect(-5, -30 + bob, 9, 8); // hair
-      ctx.strokeRect(-5, -30 + bob, 9, 8);
-      ctx.fillStyle = p.color; // coat
-      ctx.fillRect(-6, -22 + bob, 12, 15);
-      ctx.strokeRect(-6, -22 + bob, 12, 15);
-      ctx.fillStyle = '#334155'; // pants
-      ctx.fillRect(-4 + legSwing, -7, 4, 9);
-      ctx.fillRect(1 - legSwing, -7, 4, 9);
-      // Holding drink cup
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(7, -18 + bob, 4, 6);
-      ctx.strokeRect(7, -18 + bob, 4, 6);
+      drawGroundShadow(16);
+      const hipY = -24 - bob;
+      const shoulderY = -47 - bob;
+
+      // Back Leg (Tailored Charcoal Slacks + Brown Leather Oxford Shoe)
+      drawRealisticHumanLeg(ctx, -1, hipY, 12, 11.5, counterStride * 0.45, backKnee, '#1e293b', '#451a03', '#1c1917', 5.5);
+
+      // Back Arm carrying Structured Leather Briefcase
+      const bagHand = drawRealisticHumanArm(ctx, -1, shoulderY + 2.5, 10.5, 10, counterStride * 0.35, 0.22, p.color, '#eab68c', 4.6);
+
+      // Leather Briefcase / Messenger Bag in back hand
+      ctx.save();
+      ctx.translate(bagHand.handX, bagHand.handY + 2);
+      ctx.rotate(counterStride * 0.18);
+      ctx.fillStyle = '#78350f';
+      ctx.strokeStyle = '#291507';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.roundRect(-7, 0, 14, 10, 2);
+      ctx.fill();
+      ctx.stroke();
+      // Brass clasps
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(-4, 2.5, 1.8, 2.2);
+      ctx.fillRect(2.2, 2.5, 1.8, 2.2);
+      ctx.restore();
+
+      // Tailored Trench Coat / Blazer Torso with Collar, Lapels, Tie & Waist Belt
+      ctx.fillStyle = p.color;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(-6.5, shoulderY);
+      ctx.lineTo(6.5, shoulderY);
+      ctx.lineTo(7.8, hipY + 5);
+      ctx.lineTo(-7.5, hipY + 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Crisp White Dress Shirt V-Neck & Red Silk Tie
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(1.5, shoulderY);
+      ctx.lineTo(6.2, shoulderY);
+      ctx.lineTo(4.2, shoulderY + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(3.8, shoulderY + 1);
+      ctx.lineTo(5.2, shoulderY + 1);
+      ctx.lineTo(4.5, shoulderY + 9);
+      ctx.closePath();
+      ctx.fill();
+
+      // Trench Coat Lapel, Buttons & Waist Belt
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.fillRect(-6.8, shoulderY + 14, 13.8, 2.6);
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(1.5, shoulderY + 13.6, 2.5, 3.4); // Belt buckle
+
+      // Front Leg
+      drawRealisticHumanLeg(ctx, 0.5, hipY, 12, 11.5, stride * 0.45, frontKnee, '#334155', '#5c2406', '#1c1917', 5.8);
+
+      // Front Arm bent holding Takeaway Coffee Cup
+      const cupHand = drawRealisticHumanArm(ctx, 0.5, shoulderY + 3, 10.5, 9.5, 0.18, 0.78, p.color, '#f5cba7', 4.8);
+
+      // Realistic Takeaway Coffee Cup with Kraft Sleeve & White Dome Lid
+      ctx.save();
+      ctx.translate(cupHand.handX + 2.5, cupHand.handY - 1.5);
+      // Cup body
+      ctx.fillStyle = '#f8fafc';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-2.6, -4);
+      ctx.lineTo(2.6, -4);
+      ctx.lineTo(2.0, 3.5);
+      ctx.lineTo(-2.0, 3.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Kraft cardboard sleeve
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(-2.3, -1.8, 4.6, 3.2);
+      // White dome lid
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-3.0, -5.4, 6.0, 1.6);
+      ctx.strokeRect(-3.0, -5.4, 6.0, 1.6);
+      ctx.restore();
+
+      // Adult Head with Parted Layered Hair
+      drawRealisticHumanHead(ctx, 0.8, shoulderY - 7.5, 6.6, '#f8d5b8', '#dfb18b', '#292018', 'parted');
       break;
     }
   }

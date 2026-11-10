@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Trophy, HelpCircle, Volume2, VolumeX, Film } from 'lucide-react';
 import { sound } from '../audio/soundManager';
 import { MossMonsterSprite } from './MossMonsterSprite';
 import { WaterSpiritSprite } from './WaterSpiritSprite';
+import { ThreeSceneBackground } from '../game/ThreeSceneBackground';
 
 interface StartScreenProps {
   nickname: string;
@@ -25,6 +26,36 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [monsterCatching, setMonsterCatching] = useState(false);
   const [midoriCatching, setMidoriCatching] = useState(false);
+  const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mouseXRef = useRef<number>(480);
+
+  // Live 3D Three.js Background on the Start Screen
+  useEffect(() => {
+    const canvas = bgCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const threeBg = new ThreeSceneBackground(960, 540);
+    let animId = 0;
+    const startTime = performance.now();
+
+    const renderLoop = (now: number) => {
+      const elapsed = (now - startTime) / 1000;
+      if (threeBg.isAvailable) {
+        threeBg.update(elapsed, 'BLUE', mouseXRef.current);
+        threeBg.render();
+        ctx.drawImage(threeBg.getCanvas(), 0, 0, 960, 540);
+      }
+      animId = requestAnimationFrame(renderLoop);
+    };
+
+    animId = requestAnimationFrame(renderLoop);
+    return () => {
+      cancelAnimationFrame(animId);
+      threeBg.dispose();
+    };
+  }, []);
 
   const handleMonsterClick = () => {
     sound.playCatchTrash();
@@ -57,26 +88,22 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[480px] sm:min-h-[520px] flex flex-col justify-between items-center p-4 sm:p-6 pencil-paper-bg text-[#2c2520] select-none overflow-y-auto sm:overflow-hidden">
-      {/* Decorative Colored-Pencil Sky Top & River Bottom */}
-      <div
-        className="absolute top-0 inset-x-0 h-28 pointer-events-none opacity-45"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(-33deg, rgba(59, 130, 246, 0.35) 0px, rgba(59, 130, 246, 0.35) 1.5px, transparent 1.5px, transparent 5px)',
-          maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)',
-        }}
+    <div
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        mouseXRef.current = ((e.clientX - rect.left) / Math.max(1, rect.width)) * 960;
+      }}
+      className="relative w-full h-full min-h-[480px] sm:min-h-[520px] flex flex-col justify-between items-center p-4 sm:p-6 pencil-paper-bg text-[#2c2520] select-none overflow-y-auto sm:overflow-hidden"
+    >
+      {/* Live Global Three.js 3D World Background Canvas */}
+      <canvas
+        ref={bgCanvasRef}
+        width={960}
+        height={540}
+        className="absolute inset-0 w-full h-full object-fill pointer-events-none"
       />
-      <div
-        className="absolute bottom-0 inset-x-0 h-24 pointer-events-none opacity-55"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(-26deg, rgba(14, 165, 233, 0.42) 0px, rgba(13, 148, 136, 0.42) 2px, transparent 2px, transparent 5px)',
-          maskImage: 'linear-gradient(to top, black 50%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to top, black 50%, transparent 100%)',
-        }}
-      />
+      {/* Subtle warm paper veil for high UI contrast over the 3D scene */}
+      <div className="absolute inset-0 bg-[#fdfbf7]/45 backdrop-blur-[1px] pointer-events-none" />
 
       {/* Top Controls Bar */}
       <div className="w-full max-w-2xl flex items-center justify-end z-10 gap-2">
