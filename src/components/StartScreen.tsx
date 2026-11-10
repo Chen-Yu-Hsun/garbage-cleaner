@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Play, Trophy, HelpCircle, Volume2, VolumeX, Shield, Sparkles, Film } from 'lucide-react';
 import { sound } from '../audio/soundManager';
 import { MossMonsterSprite } from './MossMonsterSprite';
+import { WaterSpiritSprite } from './WaterSpiritSprite';
 
 interface StartScreenProps {
   nickname: string;
@@ -113,8 +114,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           </div>
           <span className="text-[#34d399] font-pixel text-sm">→ 7連擊 →</span>
           <div className="flex flex-col items-center gap-1">
-            <div className="w-16 h-16 rounded-xl bg-[#0e3b3a]/90 border-2 border-[#14b8a6] flex items-center justify-center text-3xl shadow-lg shadow-[#14b8a6]/25">
-              ✨
+            <div className="w-16 h-16 rounded-xl bg-[#0e3b3a]/90 border-2 border-[#14b8a6] flex items-center justify-center shadow-lg shadow-[#14b8a6]/25 overflow-hidden">
+              <WaterSpiritSprite size={48} />
             </div>
             <span className="text-[11px] font-pixel-tc text-[#2dd4bf] font-bold">米多力 (無敵)</span>
           </div>

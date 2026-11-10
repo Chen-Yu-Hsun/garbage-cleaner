@@ -1,0 +1,97 @@
+import React from 'react';
+
+const PALETTE: Record<string, string> = {
+  ".": "transparent",
+  "O": "#16697a",
+  "D": "#278ea5",
+  "M": "#45b0c7",
+  "C": "#64c5da",
+  "L": "#8adaea",
+  "H": "#bcebf5",
+  "W": "#ffffff",
+  "E": "#382215",
+  "P": "#f59896",
+  "F": "#f7b7b5",
+  "R": "#d44627",
+  "T": "#eb6536",
+  "Y": "#d6be78",
+  "B": "#b39754",
+  "I": "#1b7a94"
+};
+
+const SPRITE_DATA = [
+  "................................",
+  ".......D........................",
+  ".......DD.......................",
+  "......DDDD......................",
+  "......DCCCD.....................",
+  "......DCLLCCD...................",
+  ".....DCCLLLLCCCD................",
+  ".....DCLLHHHHHHHHCCD............",
+  ".....DCLLHHHHHHHHMCCD...........",
+  "......DCLLMLLLLMCMMCCD..........",
+  "......DCCLLLLLLMMMMCCD..........",
+  ".......DCCCMMMMMMMMMCCCD........",
+  "........DDDDDDDDDDDDDDCD........",
+  "........DOOOOOOOOOOOOMLCD.......",
+  ".......DCLLWWLLCCCCCLMMCD.......",
+  ".......DCLWEEWLCCWWCCLMCD.......",
+  ".......DCLWEEWLCWEEWCLMCD.......",
+  ".......DCLLWWLLCWEEWCLMCD.......",
+  ".......DCFPPFCCWRRWCCLMCD.......",
+  ".......DCCFFCCCRTTTFPPMCD.......",
+  "........DCLLLLLLTTWFFMCD........",
+  ".....DDCCCLLLLLLLLLLMMCD........",
+  ".....DCLLLLLLLLLLLLLMYCCCD......",
+  "......DCCLHHLLLLLLLMYCCCCD......",
+  ".......DCCHHLLLLLMYYCMMMCD......",
+  ".........DYLLLLMMYYCCMMCD.......",
+  ".........YYYYYYYCCCCMMD.........",
+  "........DYYYYYYBCCCCMMD.........",
+  "........DYYYIYYBCCCCMMD.........",
+  "........DYYIIIYBCCCCMMD.........",
+  "........DYYYYYYBCCCMMD..........",
+  "........DYYIIIYBCCCMMMD.........",
+  "........BBBBBBBBCCCCMMMD........",
+  "............DLLCCCCCMMMMD.......",
+  "..............DMMCCCCMMMD.......",
+  "................DDDDDDDD........",
+  "................................",
+  "................................"
+];
+
+export interface WaterSpiritSpriteProps {
+  size?: number;
+  flipX?: boolean;
+  className?: string;
+}
+
+export const WaterSpiritSprite: React.FC<WaterSpiritSpriteProps> = ({ size = 220, flipX = false, className = "" }) => {
+  return (
+    <svg
+      width={size}
+      height={(size * 38) / 32}
+      viewBox="0 0 32 38"
+      shapeRendering="crispEdges"
+      style={{ transform: flipX ? 'scaleX(-1)' : undefined }}
+      className={className}
+    >
+      {SPRITE_DATA.map((row, y) =>
+        row.split('').map((char, x) =>
+          char !== '.' ? (
+            <rect
+              key={`${x}-${y}`}
+              x={x}
+              y={y}
+              width={1}
+              height={1}
+              fill={PALETTE[char]}
+            />
+          ) : null
+        )
+      )}
+    </svg>
+  );
+};
+
+export default WaterSpiritSprite;

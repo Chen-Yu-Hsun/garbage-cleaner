@@ -155,6 +155,92 @@ export function drawMudMonster(
   ctx.restore();
 }
 
+const WATER_SPIRIT_PALETTE: Record<string, string> = {
+  ".": "transparent",
+  "O": "#16697a",
+  "D": "#278ea5",
+  "M": "#45b0c7",
+  "C": "#64c5da",
+  "L": "#8adaea",
+  "H": "#bcebf5",
+  "W": "#ffffff",
+  "E": "#382215",
+  "P": "#f59896",
+  "F": "#f7b7b5",
+  "R": "#d44627",
+  "T": "#eb6536",
+  "Y": "#d6be78",
+  "B": "#b39754",
+  "I": "#1b7a94"
+};
+
+const WATER_SPIRIT_SPRITE_DATA = [
+  "................................",
+  ".......D........................",
+  ".......DD.......................",
+  "......DDDD......................",
+  "......DCCCD.....................",
+  "......DCLLCCD...................",
+  ".....DCCLLLLCCCD................",
+  ".....DCLLHHHHHHHHCCD............",
+  ".....DCLLHHHHHHHHMCCD...........",
+  "......DCLLMLLLLMCMMCCD..........",
+  "......DCCLLLLLLMMMMCCD..........",
+  ".......DCCCMMMMMMMMMCCCD........",
+  "........DDDDDDDDDDDDDDCD........",
+  "........DOOOOOOOOOOOOMLCD.......",
+  ".......DCLLWWLLCCCCCLMMCD.......",
+  ".......DCLWEEWLCCWWCCLMCD.......",
+  ".......DCLWEEWLCWEEWCLMCD.......",
+  ".......DCLLWWLLCWEEWCLMCD.......",
+  ".......DCFPPFCCWRRWCCLMCD.......",
+  ".......DCCFFCCCRTTTFPPMCD.......",
+  "........DCLLLLLLTTWFFMCD........",
+  ".....DDCCCLLLLLLLLLLMMCD........",
+  ".....DCLLLLLLLLLLLLLMYCCCD......",
+  "......DCCLHHLLLLLLLMYCCCCD......",
+  ".......DCCHHLLLLLMYYCMMMCD......",
+  ".........DYLLLLMMYYCCMMCD.......",
+  ".........YYYYYYYCCCCMMD.........",
+  "........DYYYYYYBCCCCMMD.........",
+  "........DYYYIYYBCCCCMMD.........",
+  "........DYYIIIYBCCCCMMD.........",
+  "........DYYYYYYBCCCMMD..........",
+  "........DYYIIIYBCCCMMMD.........",
+  "........BBBBBBBBCCCCMMMD........",
+  "............DLLCCCCCMMMMD.......",
+  "..............DMMCCCCMMMD.......",
+  "................DDDDDDDD........",
+  "................................",
+  "................................"
+];
+
+let waterSpiritCanvasCache: HTMLCanvasElement | null = null;
+
+function getWaterSpiritCanvas(): HTMLCanvasElement {
+  if (waterSpiritCanvasCache) return waterSpiritCanvasCache;
+  if (typeof document === 'undefined') return null as any;
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 38;
+  const cCtx = canvas.getContext('2d');
+  if (cCtx) {
+    for (let y = 0; y < WATER_SPIRIT_SPRITE_DATA.length; y++) {
+      const row = WATER_SPIRIT_SPRITE_DATA[y];
+      for (let x = 0; x < row.length; x++) {
+        const char = row[x];
+        const color = WATER_SPIRIT_PALETTE[char];
+        if (color && color !== 'transparent') {
+          cCtx.fillStyle = color;
+          cCtx.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+  }
+  waterSpiritCanvasCache = canvas;
+  return canvas;
+}
+
 /**
  * Draw 米多力 (Midori - Divine Clean River Spirit)
  */
@@ -171,133 +257,52 @@ export function drawMidori(
   ctx.save();
   ctx.translate(Math.floor(centerX), Math.floor(bottomY));
 
-  const w = baseWidth;
-  const h = baseHeight;
-  const bob = isMoving ? Math.sin(walkCycle * 10) * (h * 0.07) : Math.sin(walkCycle * 4) * (h * 0.03);
+  const bob = isMoving ? Math.sin(walkCycle * 10) * 4 : Math.sin(walkCycle * 4) * 2;
+  const squash = isMoving ? 1 + Math.sin(walkCycle * 10) * 0.05 : 1;
 
-  // Outer Divine Aura / Glow
-  const auraGradient = ctx.createRadialGradient(0, -h * 0.5 + bob, w * 0.2, 0, -h * 0.5 + bob, w * 0.7);
-  auraGradient.addColorStop(0, 'rgba(52, 211, 153, 0.55)');
-  auraGradient.addColorStop(0.6, 'rgba(16, 185, 129, 0.25)');
-  auraGradient.addColorStop(1, 'rgba(6, 182, 212, 0)');
+  // Outer Divine Water Aura / Glow
+  const auraGradient = ctx.createRadialGradient(0, -baseHeight * 0.5 + bob, baseWidth * 0.2, 0, -baseHeight * 0.5 + bob, baseWidth * 0.75);
+  auraGradient.addColorStop(0, 'rgba(100, 197, 218, 0.6)');
+  auraGradient.addColorStop(0.5, 'rgba(39, 142, 165, 0.3)');
+  auraGradient.addColorStop(1, 'rgba(188, 235, 245, 0)');
   ctx.fillStyle = auraGradient;
   ctx.beginPath();
-  ctx.arc(0, -h * 0.5 + bob, w * 0.75, 0, Math.PI * 2);
+  ctx.arc(0, -baseHeight * 0.5 + bob, baseWidth * 0.8, 0, Math.PI * 2);
   ctx.fill();
 
   // Shadow under Midori
-  ctx.fillStyle = 'rgba(6, 95, 70, 0.35)';
+  ctx.fillStyle = 'rgba(22, 105, 122, 0.35)';
   ctx.beginPath();
-  ctx.ellipse(0, 0, w * 0.45, h * 0.12, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, baseWidth * 0.42, 6, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const bodyY = -h + bob;
-  const curW = w;
-  const curH = h;
+  const spriteCanvas = getWaterSpiritCanvas();
+  if (spriteCanvas) {
+    const drawW = baseWidth * squash;
+    const drawH = baseHeight / squash;
+    const drawX = -drawW / 2;
+    const drawY = -drawH + bob;
 
-  // Luminous emerald / cyan body colors
-  const cDark = '#065f46';
-  const cMid = '#10b981';
-  const cLight = '#6ee7b7';
-  const cShine = '#d1fae5';
+    // Nearest-neighbor crisp pixel rendering
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-  // Base Midori silhouette
-  ctx.fillStyle = cDark;
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.54, curW * 0.46, curH * 0.44, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Head
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.36, curW * 0.38, curH * 0.34, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Inner bright emerald body
-  ctx.fillStyle = cMid;
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.55, curW * 0.4, curH * 0.38, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.38, curW * 0.32, curH * 0.3, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Crystalline highlights
-  ctx.fillStyle = cLight;
-  ctx.fillRect(-curW * 0.24, bodyY + curH * 0.2, curW * 0.14, curH * 0.1);
-  ctx.fillRect(curW * 0.12, bodyY + curH * 0.22, curW * 0.12, curH * 0.08);
-
-  // Sprout / River leaf on head
-  ctx.fillStyle = '#22c55e';
-  ctx.beginPath();
-  ctx.ellipse(0, bodyY + curH * 0.06, curW * 0.1, curH * 0.18, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#86efac';
-  ctx.beginPath();
-  ctx.arc(-2, bodyY + curH * 0.04, curW * 0.05, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Big sparkling hero eyes
-  const eyeRadius = curW * 0.14;
-  const eyeY = bodyY + curH * 0.34;
-  const eyeSpread = curW * 0.18;
-
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(-eyeSpread, eyeY, eyeRadius, 0, Math.PI * 2);
-  ctx.arc(eyeSpread, eyeY, eyeRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Deep emerald pupil
-  ctx.fillStyle = '#064e3b';
-  const pupilRadius = eyeRadius * 0.6;
-  ctx.beginPath();
-  ctx.arc(-eyeSpread, eyeY - eyeRadius * 0.25, pupilRadius, 0, Math.PI * 2);
-  ctx.arc(eyeSpread, eyeY - eyeRadius * 0.25, pupilRadius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Double sparkle glints
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(-eyeSpread + 2, eyeY - eyeRadius * 0.35, pupilRadius * 0.45, 0, Math.PI * 2);
-  ctx.arc(eyeSpread + 2, eyeY - eyeRadius * 0.35, pupilRadius * 0.45, 0, Math.PI * 2);
-  ctx.arc(-eyeSpread - 2, eyeY - eyeRadius * 0.05, pupilRadius * 0.25, 0, Math.PI * 2);
-  ctx.arc(eyeSpread - 2, eyeY - eyeRadius * 0.05, pupilRadius * 0.25, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Rosy blush cheeks matching the official animation style
-  ctx.fillStyle = 'rgba(251, 113, 133, 0.6)';
-  ctx.beginPath();
-  ctx.ellipse(-curW * 0.25, bodyY + curH * 0.45, curW * 0.08, curH * 0.05, 0, 0, Math.PI * 2);
-  ctx.ellipse(curW * 0.25, bodyY + curH * 0.45, curW * 0.08, curH * 0.05, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mouth
-  const mouthY = bodyY + curH * 0.6;
-  if (isCatching) {
-    ctx.fillStyle = '#064e3b';
-    ctx.beginPath();
-    ctx.ellipse(0, mouthY, curW * 0.22, curH * 0.18, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fb7185';
-    ctx.beginPath();
-    ctx.ellipse(0, mouthY + curH * 0.07, curW * 0.14, curH * 0.08, 0, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    ctx.strokeStyle = '#064e3b';
-    ctx.lineWidth = Math.max(2, curW * 0.04);
-    ctx.beginPath();
-    ctx.arc(0, mouthY - curH * 0.03, curW * 0.15, 0.2, Math.PI - 0.2);
-    ctx.stroke();
+    // If catching, render joyful mouth glow
+    if (isCatching) {
+      ctx.fillStyle = '#eb6536';
+      ctx.fillRect(drawX + drawW * 0.42, drawY + drawH * 0.48, drawW * 0.16, drawH * 0.08);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(drawX + drawW * 0.46, drawY + drawH * 0.47, drawW * 0.08, drawH * 0.02);
+    }
   }
 
-  // Pure clean water aura particles
-  ctx.fillStyle = cShine;
+  // Pure clean water sparkling particles
+  ctx.fillStyle = '#bcebf5';
   const p1 = Math.sin(walkCycle * 8) * 12;
   const p2 = Math.cos(walkCycle * 7) * 12;
-  ctx.fillRect(-curW * 0.45 + p1, bodyY + curH * 0.3, 4, 4);
-  ctx.fillRect(curW * 0.45 - p2, bodyY + curH * 0.4, 4, 4);
-  ctx.fillRect(0, bodyY - 10 + p1, 5, 5);
+  ctx.fillRect(-baseWidth * 0.45 + p1, -baseHeight * 0.6, 4, 4);
+  ctx.fillRect(baseWidth * 0.45 - p2, -baseHeight * 0.4, 4, 4);
+  ctx.fillRect(0, -baseHeight - 6 + p1, 5, 5);
 
   ctx.restore();
 }
