@@ -2,12 +2,16 @@ import React from 'react';
 
 interface StageCurtainProps {
   isClosed: boolean;
+  openDurationMs?: number;
+  closeDurationMs?: number;
   onClosedTransitionEnd?: () => void;
   onOpenedTransitionEnd?: () => void;
 }
 
 export const StageCurtain: React.FC<StageCurtainProps> = ({
   isClosed,
+  openDurationMs = 1800,
+  closeDurationMs = 600,
   onClosedTransitionEnd,
   onOpenedTransitionEnd,
 }) => {
@@ -23,9 +27,12 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
 
   return (
     <div
-      className={`absolute inset-0 z-50 overflow-hidden pointer-events-none transition-colors duration-500 select-none ${
-        isClosed ? 'pointer-events-auto bg-black/20' : ''
+      className={`absolute inset-0 z-50 overflow-hidden pointer-events-none select-none ${
+        isClosed ? 'pointer-events-auto bg-black/35' : ''
       }`}
+      style={{
+        transition: `background-color ${isClosed ? closeDurationMs : openDurationMs}ms ease-out`,
+      }}
     >
       {/* =========================================================================
           LEFT STAGE CURTAIN (左布幕)
@@ -35,8 +42,8 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
         style={{
           transform: isClosed ? 'translate3d(0, 0, 0)' : 'translate3d(-102%, 0, 0)',
           transition: isClosed
-            ? 'transform 550ms cubic-bezier(0.25, 1, 0.5, 1)'
-            : 'transform 650ms cubic-bezier(0.16, 1, 0.3, 1)',
+            ? `transform ${closeDurationMs}ms cubic-bezier(0.25, 1, 0.5, 1)`
+            : `transform ${openDurationMs}ms cubic-bezier(0.2, 0.96, 0.3, 1)`,
         }}
         className="absolute top-0 left-0 w-[51%] h-full shadow-[6px_0px_25px_rgba(0,0,0,0.65)] will-change-transform flex"
       >
@@ -83,9 +90,14 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
 
           {/* Golden Rope Sash Tie-Back when opened (開門幕繩) */}
           <div
-            className={`absolute top-1/2 left-4 w-7 h-36 -translate-y-1/2 rounded-full border-2 border-[#ca8a04] bg-[#eab308] shadow-lg transition-opacity duration-300 flex flex-col items-center justify-center ${
+            className={`absolute top-1/2 left-4 w-7 h-36 -translate-y-1/2 rounded-full border-2 border-[#ca8a04] bg-[#eab308] shadow-lg flex flex-col items-center justify-center ${
               isClosed ? 'opacity-0' : 'opacity-85'
             }`}
+            style={{
+              transition: `opacity ${Math.round(openDurationMs * 0.6)}ms ease-out ${
+                isClosed ? '0ms' : `${Math.round(openDurationMs * 0.35)}ms`
+              }`,
+            }}
           >
             <div className="w-4 h-4 rounded-full bg-[#facc15] border border-[#a16207] shadow-sm mb-1" />
             <div className="w-1.5 h-16 bg-[#ca8a04] rounded-full" />
@@ -101,8 +113,8 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
         style={{
           transform: isClosed ? 'translate3d(0, 0, 0)' : 'translate3d(102%, 0, 0)',
           transition: isClosed
-            ? 'transform 550ms cubic-bezier(0.25, 1, 0.5, 1)'
-            : 'transform 650ms cubic-bezier(0.16, 1, 0.3, 1)',
+            ? `transform ${closeDurationMs}ms cubic-bezier(0.25, 1, 0.5, 1)`
+            : `transform ${openDurationMs}ms cubic-bezier(0.2, 0.96, 0.3, 1)`,
         }}
         className="absolute top-0 right-0 w-[51%] h-full shadow-[-6px_0px_25px_rgba(0,0,0,0.65)] will-change-transform flex"
       >
@@ -148,9 +160,14 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
 
           {/* Golden Rope Sash Tie-Back when opened (開門幕繩) */}
           <div
-            className={`absolute top-1/2 right-4 w-7 h-36 -translate-y-1/2 rounded-full border-2 border-[#ca8a04] bg-[#eab308] shadow-lg transition-opacity duration-300 flex flex-col items-center justify-center ${
+            className={`absolute top-1/2 right-4 w-7 h-36 -translate-y-1/2 rounded-full border-2 border-[#ca8a04] bg-[#eab308] shadow-lg flex flex-col items-center justify-center ${
               isClosed ? 'opacity-0' : 'opacity-85'
             }`}
+            style={{
+              transition: `opacity ${Math.round(openDurationMs * 0.6)}ms ease-out ${
+                isClosed ? '0ms' : `${Math.round(openDurationMs * 0.35)}ms`
+              }`,
+            }}
           >
             <div className="w-4 h-4 rounded-full bg-[#facc15] border border-[#a16207] shadow-sm mb-1" />
             <div className="w-1.5 h-16 bg-[#ca8a04] rounded-full" />
@@ -167,8 +184,8 @@ export const StageCurtain: React.FC<StageCurtainProps> = ({
         style={{
           transform: isClosed ? 'translate3d(0, 0, 0)' : 'translate3d(0, -105%, 0)',
           transition: isClosed
-            ? 'transform 450ms cubic-bezier(0.25, 1, 0.5, 1)'
-            : 'transform 550ms cubic-bezier(0.16, 1, 0.3, 1)',
+            ? `transform ${Math.round(closeDurationMs * 0.85)}ms cubic-bezier(0.25, 1, 0.5, 1)`
+            : `transform ${Math.round(openDurationMs * 0.85)}ms cubic-bezier(0.2, 0.96, 0.3, 1)`,
         }}
         className="absolute top-0 inset-x-0 h-9 sm:h-11 z-40 pointer-events-none shadow-md overflow-hidden flex will-change-transform"
       >

@@ -57,7 +57,7 @@ export default function App() {
   const pendingActionRef = useRef<(() => void) | null>(null);
 
   const executeWithCurtain = useCallback((action: () => void) => {
-    sound.playCurtain();
+    sound.playCurtain(false);
     setIsCurtainClosed(true);
     pendingActionRef.current = action;
   }, []);
@@ -69,30 +69,36 @@ export default function App() {
     }
     // Brief pause at closed curtain before opening stage
     setTimeout(() => {
-      sound.playCurtain();
+      sound.playCurtain(true);
       setIsCurtainClosed(false);
-    }, 140);
+    }, 200);
   }, []);
 
-  // Pull open curtain when intro video starts playing
+  // Pull open curtain when intro video starts playing with prolonged dramatic reveal
   const handleVideoStart = useCallback(() => {
-    if (isCurtainClosed) {
-      sound.playCurtain();
-      setIsCurtainClosed(false);
-    }
-  }, [isCurtainClosed]);
+    const timer = setTimeout(() => {
+      setIsCurtainClosed((prev) => {
+        if (prev) {
+          sound.playCurtain(true);
+          return false;
+        }
+        return false;
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initial mount fallback to ensure curtain pulls open even if browser autoplay is delayed
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsCurtainClosed((prev) => {
         if (prev) {
-          sound.playCurtain();
+          sound.playCurtain(true);
           return false;
         }
         return false;
       });
-    }, 350);
+    }, 700);
     return () => clearTimeout(timer);
   }, []);
 
@@ -346,6 +352,8 @@ export default function App() {
         {/* Theatrical Stage Curtain Transition Overlay (舞台開閉幕過場) */}
         <StageCurtain
           isClosed={isCurtainClosed}
+          openDurationMs={1800}
+          closeDurationMs={600}
           onClosedTransitionEnd={handleCurtainClosed}
         />
       </div>

@@ -188,9 +188,21 @@ class SoundManager {
   }
 
   // Theatrical Stage Curtain Open / Close Chime (舞台開幕/閉幕音效)
-  public playCurtain() {
-    this.playNoise(0.28, 0.15, true);
-    this.playTone(523.25, 'sine', 0.28, 0.22, this.sfxGain, 659.25);
+  public playCurtain(isOpening: boolean = true) {
+    if (isOpening) {
+      // Grand theatrical opening chime & swoosh (sustained for longer curtain parting)
+      this.playNoise(0.7, 0.22, true);
+      this.playTone(440, 'sine', 0.45, 0.22, this.sfxGain, 554.37);
+      setTimeout(() => {
+        this.playTone(554.37, 'sine', 0.55, 0.24, this.sfxGain, 659.25);
+      }, 160);
+      setTimeout(() => {
+        this.playTone(659.25, 'sine', 0.85, 0.26, this.sfxGain, 880);
+      }, 340);
+    } else {
+      this.playNoise(0.35, 0.16, true);
+      this.playTone(523.25, 'sine', 0.35, 0.22, this.sfxGain, 440);
+    }
   }
 
   // Game over defeat sound (AC-35)
