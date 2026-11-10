@@ -734,36 +734,36 @@ export class GameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.V_WIDTH, this.V_HEIGHT);
 
-    // 1. Render Full-Screen Three.js 3D World Background (Sky, Clouds, Horizon Foliage,
-    //    3D Bridge Deck, 3D Vertical Arch Supports & Piers, Volumetric God Rays & 3D River Water)
+    // 1. Render Full-Screen Three.js 3D World & 3D Entities (Sky, Clouds, Horizon Foliage,
+    //    3D Bridge Deck, 3D Pedestrians Crowd, 3D Vertical Arch Supports & Piers,
+    //    3D Falling Trash & Raindrops, 3D Floating River Trash, Volumetric God Rays & 3D River Water)
     const hasThreeScene = Boolean(this.threeScene && this.threeScene.isAvailable);
     if (hasThreeScene) {
-      this.threeScene.update(this.effectiveGameTime, this.waterQuality, this.playerX);
+      this.threeScene.update(this.effectiveGameTime, this.waterQuality, this.playerX, {
+        pedestrians: this.pedestrians,
+        trashList: this.trashList,
+        raindropList: this.raindropList,
+        visibleRiverTrash: this.visibleRiverTrash,
+      });
       this.threeScene.render();
       ctx.drawImage(this.threeScene.getCanvas(), 0, 0, this.V_WIDTH, this.V_HEIGHT);
     } else {
       drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime, this.playerX, false);
-    }
 
-    // 2. Draw Pedestrians on bridge
-    for (const p of this.pedestrians) {
-      drawPedestrian(ctx, p);
-    }
-
-    // 3. Draw Visible River Trash (Floating on water)
-    for (const vt of this.visibleRiverTrash) {
-      const bob = Math.sin(this.effectiveGameTime * vt.bobSpeed + vt.bobOffset) * 3;
-      drawTrash(ctx, vt.type, vt.x, vt.y + bob, 22, 24, vt.rotation);
-    }
-
-    // 4. Draw Falling Raindrops
-    for (const rain of this.raindropList) {
-      drawRaindrop(ctx, rain.x, rain.y, rain.width, rain.height, this.effectiveGameTime);
-    }
-
-    // 5. Draw Falling Trash Items
-    for (const trash of this.trashList) {
-      drawTrash(ctx, trash.type, trash.x, trash.y, trash.width, trash.height, trash.rotation);
+      // 2D Fallback for Pedestrians & Items when WebGL is unavailable
+      for (const p of this.pedestrians) {
+        drawPedestrian(ctx, p);
+      }
+      for (const vt of this.visibleRiverTrash) {
+        const bob = Math.sin(this.effectiveGameTime * vt.bobSpeed + vt.bobOffset) * 3;
+        drawTrash(ctx, vt.type, vt.x, vt.y + bob, 22, 24, vt.rotation);
+      }
+      for (const rain of this.raindropList) {
+        drawRaindrop(ctx, rain.x, rain.y, rain.width, rain.height, this.effectiveGameTime);
+      }
+      for (const trash of this.trashList) {
+        drawTrash(ctx, trash.type, trash.x, trash.y, trash.width, trash.height, trash.rotation);
+      }
     }
 
     // 6. Draw Player Character

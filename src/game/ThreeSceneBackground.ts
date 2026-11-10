@@ -1,18 +1,50 @@
 import * as THREE from 'three';
-import { WaterQuality } from '../types/game';
+import {
+  WaterQuality,
+  Pedestrian,
+  TrashObject,
+  RaindropObject,
+  VisibleRiverTrash,
+  TrashType,
+} from '../types/game';
+
+/**
+ * Articulated 3D Pedestrian Rig references for real-time gait animation
+ */
+interface Pedestrian3DRig {
+  root: THREE.Group;
+  type: Pedestrian['type'];
+  bodyGroup: THREE.Group;
+  headGroup?: THREE.Group;
+  leftLegPivot?: THREE.Group;
+  leftShinPivot?: THREE.Group;
+  rightLegPivot?: THREE.Group;
+  rightShinPivot?: THREE.Group;
+  leftArmPivot?: THREE.Group;
+  rightArmPivot?: THREE.Group;
+  // Canine 4-leg & tail pivots
+  dogFL?: THREE.Group;
+  dogFR?: THREE.Group;
+  dogBL?: THREE.Group;
+  dogBR?: THREE.Group;
+  dogTail?: THREE.Group;
+  // Cart wheels & balloon
+  wheelFront?: THREE.Group;
+  wheelBack?: THREE.Group;
+  balloonGroup?: THREE.Group;
+}
 
 /**
  * ThreeSceneBackground
- * Full-screen (960x540) real-time 3D Game World Background powered by Three.js.
- * Renders:
- *  - 3D Atmospheric Sky Dome & Drifting 3D Volumetric Cloud Clusters
- *  - 3D Lush Horizon Foliage / Tree Clusters with directional lighting
- *  - 3D Extruded Stone Bridge Deck, Parapet, Coping Cornice, 11 Corbel Brackets, Bins & "傷心湯" Sign
- *  - 3D Monumental Vertical Arch Supports (4 Ashlar Stone Piers, Impost Capitals, 3D Cutwater Prows,
- *    3 Semicircular Arches with 3D Radial Voussoir Wedges, Protruding Keystones & Deep Barrel-Vault Tunnels)
- *  - 3D Trapezoidal Side Embankment Retaining Walls & Hanging 3D Moss Clusters
- *  - 3D Volumetric Sunbeam Shafts (God Rays)
- *  - 3D Dynamic Gerstner-Wave River Water Surface extending from deep arch tunnels to foreground
+ * Full-screen (960x540) real-time 3D Game World & Entities powered by Three.js.
+ * Renders in one unified 3D scene:
+ *  - 3D Sky Dome, Drifting 3D Clouds & Lush 3D Horizon Foliage
+ *  - 3D Stone Bridge Deck, Parapet, Coping Cornice, 11 Corbels, 3D Bins & "傷心湯" Sign
+ *  - 3D Monumental Vertical Arch Supports (4 Ashlar Piers, Impost Capitals, 3D Cutwaters,
+ *    3 Semicircular Arches with 3D Voussoirs, Keystones & Deep Barrel-Vault Tunnels)
+ *  - 3D Articulated Bridge Pedestrians / Crowd (人群: Adult, Teen, Child, Elder, Dog, Vendor & Cart)
+ *  - 3D Falling Trash Items (掉落物: T01..T06), 3D Falling Raindrops & 3D Floating River Trash
+ *  - 3D Dynamic Gerstner-Wave River Water Surface & Volumetric God Rays
  */
 export class ThreeSceneBackground {
   private canvas: HTMLCanvasElement;
@@ -21,7 +53,7 @@ export class ThreeSceneBackground {
   private camera: THREE.PerspectiveCamera;
   public isAvailable: boolean = false;
 
-  // Dynamic Scene Elements & Materials for WaterQuality & Animation updates
+  // Dynamic Scene Elements & Materials
   private skyMat!: THREE.ShaderMaterial;
   private waterMat!: THREE.ShaderMaterial;
   private godRayMat!: THREE.ShaderMaterial;
@@ -33,6 +65,22 @@ export class ThreeSceneBackground {
   private sunLight!: THREE.DirectionalLight;
   private hemiLight!: THREE.HemisphereLight;
   private signMesh!: THREE.Mesh;
+
+  // 3D Crowd (人群) & 3D Falling/Floating Items (掉落物) Containers
+  private pedestrianRigs: Map<string, Pedestrian3DRig> = new Map();
+  private trashMeshes: Map<string, THREE.Group> = new Map();
+  private raindropMeshes: Map<string, THREE.Group> = new Map();
+  private riverTrashMeshes: Map<string, THREE.Group> = new Map();
+
+  // Default ambient pedestrians for Start Screen preview when no engine state is passed
+  private defaultPedestrians: Pedestrian[] = [
+    { id: 'def-p1', type: 'child', x: 220, y: 104, direction: 1, speed: 42, walkFrame: 0, color: '#0284c7', balloonColor: '#ef4444' },
+    { id: 'def-p2', type: 'cart', x: 480, y: 104, direction: 1, speed: 32, walkFrame: 0, color: '#ea580c', balloonColor: '#facc15' },
+    { id: 'def-p3', type: 'dog', x: 170, y: 106, direction: 1, speed: 60, walkFrame: 1, color: '#b45309' },
+    { id: 'def-p4', type: 'adult', x: 680, y: 104, direction: -1, speed: 46, walkFrame: 2, color: '#475569' },
+    { id: 'def-p5', type: 'elder', x: 820, y: 104, direction: -1, speed: 28, walkFrame: 0, color: '#57534e' },
+    { id: 'def-p6', type: 'teen', x: 360, y: 104, direction: -1, speed: 52, walkFrame: 3, color: '#9333ea' },
+  ];
 
   private lastWaterQuality: WaterQuality | null = null;
 
@@ -93,7 +141,6 @@ export class ThreeSceneBackground {
     ctx.fillStyle = baseHex;
     ctx.fillRect(0, 0, 256, 256);
 
-    // Subtle colored-pencil diagonal cross-hatching + stone grain
     ctx.strokeStyle = grainHex;
     ctx.lineWidth = 1.5;
     ctx.globalAlpha = 0.28;
@@ -104,7 +151,6 @@ export class ThreeSceneBackground {
       ctx.stroke();
     }
 
-    // Ashlar masonry mortar lines
     ctx.strokeStyle = lineHex;
     ctx.lineWidth = 3;
     ctx.globalAlpha = 0.55;
@@ -141,7 +187,6 @@ export class ThreeSceneBackground {
     c.height = 160;
     const ctx = c.getContext('2d')!;
 
-    // Wood grain background
     const grad = ctx.createLinearGradient(0, 0, 0, 160);
     grad.addColorStop(0, '#9c622d');
     grad.addColorStop(0.5, '#7c4a1e');
@@ -149,7 +194,6 @@ export class ThreeSceneBackground {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 256, 160);
 
-    // Wood plank lines
     ctx.strokeStyle = 'rgba(40, 20, 5, 0.45)';
     ctx.lineWidth = 2;
     for (let y = 32; y < 160; y += 32) {
@@ -159,7 +203,6 @@ export class ThreeSceneBackground {
       ctx.stroke();
     }
 
-    // Outer frame border
     ctx.strokeStyle = '#3b200c';
     ctx.lineWidth = 10;
     ctx.strokeRect(5, 5, 246, 150);
@@ -168,7 +211,6 @@ export class ThreeSceneBackground {
     ctx.lineWidth = 2;
     ctx.strokeRect(14, 14, 228, 132);
 
-    // Calligraphic text "傷心湯"
     ctx.fillStyle = '#fffbeb';
     ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
     ctx.shadowBlur = 4;
@@ -179,8 +221,7 @@ export class ThreeSceneBackground {
     ctx.textBaseline = 'middle';
     ctx.fillText('傷心湯', 128, 84);
 
-    const tex = new THREE.CanvasTexture(c);
-    return tex;
+    return new THREE.CanvasTexture(c);
   }
 
   private buildLights() {
@@ -192,14 +233,12 @@ export class ThreeSceneBackground {
     this.sunLight.position.set(-8, 11, 12);
     this.scene.add(this.sunLight);
 
-    // Subtle warm fill light from the right water reflection
     const bounceLight = new THREE.DirectionalLight(0x7dd3fc, 0.45);
     bounceLight.position.set(6, -6, 8);
     this.scene.add(bounceLight);
   }
 
   private buildSkyAndClouds() {
-    // 1. 3D Sky Backdrop Plane at Z = -8
     const skyGeo = new THREE.PlaneGeometry(34, 16);
     this.skyMat = new THREE.ShaderMaterial({
       depthWrite: false,
@@ -221,10 +260,8 @@ export class ThreeSceneBackground {
         uniform vec3 uPaperTint;
         varying vec2 vUv;
         void main() {
-          // Focus gradient in upper sky region
           float t = smoothstep(0.45, 0.98, vUv.y);
           vec3 col = mix(uBottomColor, uTopColor, t);
-          // Subtle diagonal colored-pencil sky texture
           float hatch = mod(gl_FragCoord.x * 0.55 - gl_FragCoord.y * 0.35, 5.0);
           if (hatch < 1.2) {
             col = mix(col, uPaperTint, 0.12);
@@ -237,7 +274,6 @@ export class ThreeSceneBackground {
     skyMesh.position.set(0, 2.5, -8);
     this.scene.add(skyMesh);
 
-    // 2. 3D Volumetric Fluffy Clouds at Z = -5.5
     const cloudMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
       roughness: 0.9,
@@ -271,7 +307,6 @@ export class ThreeSceneBackground {
   }
 
   private buildHorizonFoliage() {
-    // 3D Lush Tree & Bush Mounds along the Horizon behind the bridge (Y ≈ 3.6 .. 4.5, Z = -2.2)
     const foliageMatLight = new THREE.MeshStandardMaterial({
       color: 0x4ade80,
       roughness: 0.78,
@@ -344,10 +379,6 @@ export class ThreeSceneBackground {
     this.darkStoneMaterials.push(darkArchVaultMat);
     this.mossMaterials.push(mossMat);
 
-    // World coordinates calibrated to screen pixels:
-    // wallTop (135px) -> Y = +2.70
-    // ySpring (248px) -> Y = +0.44
-    // riverTop (430px) -> Y = -3.20
     const wallTopY = 2.70;
     const ySpring = 0.44;
     const riverTopY = -3.20;
@@ -360,9 +391,6 @@ export class ThreeSceneBackground {
     this.scene.add(cavernMesh);
 
     // 2. Three Monumental Semicircular 3D Arches
-    // Arch 0 (left): cx = 226.5px -> X = -5.07, R = 101.5px -> 2.03
-    // Arch 1 (center): cx = 480.0px -> X = 0.00, R = 102.0px -> 2.04
-    // Arch 2 (right): cx = 733.5px -> X = +5.07, R = 101.5px -> 2.03
     const arches = [
       { cx: -5.07, r: 2.03 },
       { cx: 0.0, r: 2.04 },
@@ -370,7 +398,6 @@ export class ThreeSceneBackground {
     ];
 
     for (const arch of arches) {
-      // A. 3D Barrel Vault Ceiling Cylinder extending from Z = 0 to Z = -4.2
       const vaultDepth = 4.2;
       const vaultGeo = new THREE.CylinderGeometry(
         arch.r,
@@ -382,14 +409,12 @@ export class ThreeSceneBackground {
         0,
         Math.PI
       );
-      // Orient cylinder along Z axis with arch curving into +Y
       vaultGeo.rotateZ(-Math.PI / 2);
       vaultGeo.rotateX(Math.PI / 2);
       const vaultMesh = new THREE.Mesh(vaultGeo, darkArchVaultMat);
       vaultMesh.position.set(arch.cx, ySpring, -vaultDepth / 2);
       this.scene.add(vaultMesh);
 
-      // B. 3D Recessed Vault Ribs inside the tunnel (Z = -0.9, -1.9, -2.9)
       for (const ribZ of [-0.85, -1.75, -2.65, -3.55]) {
         const ribGeo = new THREE.TorusGeometry(arch.r - 0.04, 0.07, 10, 28, Math.PI);
         const ribMesh = new THREE.Mesh(ribGeo, darkArchVaultMat);
@@ -397,7 +422,6 @@ export class ThreeSceneBackground {
         this.scene.add(ribMesh);
       }
 
-      // C. 3D Inner Tunnel Side Jamb Walls (extending Z = 0 .. -4.2, Y = riverTopY .. ySpring)
       const jambH = ySpring - riverTopY;
       const jambGeo = new THREE.BoxGeometry(0.18, jambH, vaultDepth);
       const leftJamb = new THREE.Mesh(jambGeo, darkArchVaultMat);
@@ -408,7 +432,6 @@ export class ThreeSceneBackground {
       rightJamb.position.set(arch.cx + arch.r - 0.05, riverTopY + jambH / 2, -vaultDepth / 2);
       this.scene.add(rightJamb);
 
-      // D. 15 Radiating 3D Wedge Voussoirs around the Arch Ring
       const numVoussoirs = 15;
       const rMid = arch.r + 0.18;
       const ringThickness = 0.36;
@@ -430,8 +453,7 @@ export class ThreeSceneBackground {
       }
     }
 
-    // 3. 3D Spandrel Walls between Arches (y: ySpring .. wallTopY)
-    // Built as solid 3D masonry triangles/blocks filling above the arches
+    // 3. 3D Spandrel Walls between Arches
     const spandrelPositions = [-7.6, -2.54, 2.54, 7.6];
     for (const sx of spandrelPositions) {
       const spGeo = new THREE.BoxGeometry(1.65, wallTopY - ySpring, 0.38);
@@ -439,7 +461,6 @@ export class ThreeSceneBackground {
       spMesh.position.set(sx, (wallTopY + ySpring) / 2, -0.05);
       this.scene.add(spMesh);
 
-      // Crown lintel band along top of arches
       const lintelGeo = new THREE.BoxGeometry(5.2, 0.32, 0.42);
       const lintelMesh = new THREE.Mesh(lintelGeo, mainStoneMat);
       lintelMesh.position.set(sx * 0.66, wallTopY - 0.14, -0.02);
@@ -447,7 +468,6 @@ export class ThreeSceneBackground {
     }
 
     // 4. Four Monumental Vertical 3D Stone Piers
-    // Piers at X = -7.60, -2.54, +2.54, +7.60 (Width = 1.00 world unit = 50px)
     const pierCenters = [-7.60, -2.54, 2.54, 7.60];
     const pierW = 1.02;
     const shaftTopY = ySpring - 0.12;
@@ -457,7 +477,6 @@ export class ThreeSceneBackground {
     for (let pIdx = 0; pIdx < pierCenters.length; pIdx++) {
       const px = pierCenters[pIdx];
 
-      // A. Main Vertical 3D Pier Column (stacked 3D ashlar courses with bevels)
       const numCourses = 7;
       const courseH = shaftH / numCourses;
       for (let c = 0; c < numCourses; c++) {
@@ -469,33 +488,27 @@ export class ThreeSceneBackground {
         this.scene.add(cMesh);
       }
 
-      // B. Protruding 3D Impost Capital Molding at Arch Spring Line (Y = ySpring)
       const capGeo = new THREE.BoxGeometry(pierW + 0.22, 0.22, 1.18);
       const capMesh = new THREE.Mesh(capGeo, mainStoneMat);
       capMesh.position.set(px, ySpring - 0.02, 0.28);
       this.scene.add(capMesh);
 
-      // Upper Capital Necking Ledge
       const neckGeo = new THREE.BoxGeometry(pierW + 0.12, 0.10, 1.06);
       const neckMesh = new THREE.Mesh(neckGeo, darkArchVaultMat);
       neckMesh.position.set(px, ySpring - 0.16, 0.24);
       this.scene.add(neckMesh);
 
-      // C. 3D Triangular Cutwater Prow (分水墩) at River Waterline
       const cutH = 0.65;
       const cutGeo = new THREE.CylinderGeometry(pierW * 0.56, pierW * 0.68, cutH, 4);
-      // Rotate so sharp 45-degree prow points straight toward camera (+Z)
       const cutMesh = new THREE.Mesh(cutGeo, mainStoneMat);
       cutMesh.position.set(px, riverTopY + 0.16, 0.45);
       this.scene.add(cutMesh);
 
-      // Cutwater stone cap pyramid
       const capPyrGeo = new THREE.ConeGeometry(pierW * 0.56, 0.28, 4);
       const capPyrMesh = new THREE.Mesh(capPyrGeo, pierStoneMat);
       capPyrMesh.position.set(px, riverTopY + 0.16 + cutH / 2 + 0.14, 0.45);
       this.scene.add(capPyrMesh);
 
-      // D. 3D Hanging Moss Clusters on Spandrels & Pier Tops
       const mossCluster = new THREE.Group();
       for (let m = 0; m < 4; m++) {
         const mGeo = new THREE.SphereGeometry(0.14 - m * 0.02, 8, 8);
@@ -511,13 +524,12 @@ export class ThreeSceneBackground {
       this.scene.add(mossCluster);
     }
 
-    // 5. Left & Right 3D Trapezoidal Embankment Retaining Walls (x: 0..75 and x: 885..960)
-    // Left Wall: X = -9.8 .. -8.1, Y = -3.20 .. +3.12
+    // 5. Left & Right 3D Trapezoidal Embankment Retaining Walls
     const sideWallH = 3.12 - riverTopY;
     const sideWallGeo = new THREE.BoxGeometry(1.9, sideWallH, 1.6);
     const leftWallMesh = new THREE.Mesh(sideWallGeo, pierStoneMat);
     leftWallMesh.position.set(-9.05, riverTopY + sideWallH / 2, 0.55);
-    leftWallMesh.rotation.y = 0.18; // Angled inner slope perspective
+    leftWallMesh.rotation.y = 0.18;
     this.scene.add(leftWallMesh);
 
     const rightWallMesh = new THREE.Mesh(sideWallGeo, pierStoneMat);
@@ -527,36 +539,30 @@ export class ThreeSceneBackground {
   }
 
   private buildBridgeDeckAndProps() {
-    // Bridge Parapet & Deck spans full width at Y = +2.70 .. +3.60 (y_px: 90..135)
     const bridgeMat = this.stoneMaterials[1];
     const corniceMat = this.stoneMaterials[0];
     const soffitMat = this.darkStoneMaterials[0];
 
-    // 1. Main Bridge Parapet Wall (y_px: 90..116 -> Y: +3.08 .. +3.60)
     const parapetGeo = new THREE.BoxGeometry(21.5, 0.54, 1.25);
     const parapetMesh = new THREE.Mesh(parapetGeo, bridgeMat);
     parapetMesh.position.set(0, 3.34, 0.35);
     this.scene.add(parapetMesh);
 
-    // Top Bridge Parapet Capstone Rail (Y = +3.60)
     const topRailGeo = new THREE.BoxGeometry(21.5, 0.10, 1.38);
     const topRailMesh = new THREE.Mesh(topRailGeo, corniceMat);
     topRailMesh.position.set(0, 3.60, 0.42);
     this.scene.add(topRailMesh);
 
-    // 2. 3D Projecting Coping Cornice Ledge (y_px: 114..122 -> Y: +2.96 .. +3.12)
     const corniceGeo = new THREE.BoxGeometry(21.5, 0.16, 1.52);
     const corniceMesh = new THREE.Mesh(corniceGeo, corniceMat);
     corniceMesh.position.set(0, 3.04, 0.52);
     this.scene.add(corniceMesh);
 
-    // 3. Recessed Underside Soffit Beam (y_px: 122..135 -> Y: +2.70 .. +2.96)
     const soffitGeo = new THREE.BoxGeometry(21.5, 0.28, 1.15);
     const soffitMesh = new THREE.Mesh(soffitGeo, soffitMat);
     soffitMesh.position.set(0, 2.83, 0.28);
     this.scene.add(soffitMesh);
 
-    // 4. 11 Protruding 3D Structural Stone Corbel Brackets
     const corbelXList = [95, 175, 255, 335, 415, 495, 575, 655, 735, 815, 895];
     const corbelGeo = new THREE.BoxGeometry(0.34, 0.28, 0.45);
     for (const cxPx of corbelXList) {
@@ -566,7 +572,6 @@ export class ThreeSceneBackground {
       this.scene.add(corbelMesh);
     }
 
-    // 5. Scenic 3D Wooden Sign "傷心湯" on Left Pier (x_px ≈ 32, y_px ≈ 126)
     const signTex = this.createSignTexture();
     const signMat = new THREE.MeshStandardMaterial({
       map: signTex,
@@ -578,7 +583,6 @@ export class ThreeSceneBackground {
     this.signMesh.position.set((32 - 480) / 50, (270 - 126) / 50, 1.38);
     this.scene.add(this.signMesh);
 
-    // Hanging chains for sign
     const chainMat = new THREE.MeshStandardMaterial({ color: 0x29180b, metalness: 0.6, roughness: 0.4 });
     const chainGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.35, 6);
     const chainL = new THREE.Mesh(chainGeo, chainMat);
@@ -589,7 +593,6 @@ export class ThreeSceneBackground {
     chainR.position.set((46 - 480) / 50, (270 - 102) / 50, 1.38);
     this.scene.add(chainR);
 
-    // 6. 3D Bridge Recycling & Waste Bins at x_px = 180 and 740
     const create3DBin = (xPx: number, bodyHex: number, lidHex: number) => {
       const group = new THREE.Group();
       const bodyGeo = new THREE.BoxGeometry(0.32, 0.48, 0.28);
@@ -611,9 +614,920 @@ export class ThreeSceneBackground {
     create3DBin(740, 0x16a34a, 0x14532d);
   }
 
+  /* ============================================================================
+   * 3D CROWD / PEDESTRIANS (人群 3D 元件)
+   * ============================================================================ */
+
+  private create3DBalloonGroup(balloonColorHex: string, heightOffset: number = 1.05): THREE.Group {
+    const group = new THREE.Group();
+
+    // String
+    const strGeo = new THREE.CylinderGeometry(0.008, 0.008, heightOffset, 6);
+    const strMat = new THREE.MeshBasicMaterial({ color: 0x475569 });
+    const strMesh = new THREE.Mesh(strGeo, strMat);
+    strMesh.position.y = heightOffset / 2;
+    group.add(strMesh);
+
+    // Glossy 3D Balloon Sphere
+    const bGeo = new THREE.SphereGeometry(0.22, 20, 18);
+    bGeo.scale(0.92, 1.15, 0.92);
+    const bMat = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(balloonColorHex),
+      roughness: 0.15,
+      metalness: 0.1,
+    });
+    const bMesh = new THREE.Mesh(bGeo, bMat);
+    bMesh.position.y = heightOffset + 0.22;
+    group.add(bMesh);
+
+    // Knot
+    const kGeo = new THREE.ConeGeometry(0.04, 0.05, 8);
+    const kMesh = new THREE.Mesh(kGeo, bMat);
+    kMesh.position.y = heightOffset - 0.02;
+    group.add(kMesh);
+
+    return group;
+  }
+
+  private createHumanoid3D(
+    p: Pedestrian,
+    scaleH: number,
+    coatColor: string,
+    pantsColor: string,
+    shoeColor: string,
+    hairColor: string,
+    role: 'adult' | 'teen' | 'child' | 'elder' | 'vendor'
+  ): Pedestrian3DRig {
+    const root = new THREE.Group();
+    const bodyGroup = new THREE.Group();
+    root.add(bodyGroup);
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf5cba7, roughness: 0.65 });
+    const coatMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(coatColor), roughness: 0.7 });
+    const pantsMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pantsColor), roughness: 0.8 });
+    const shoeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(shoeColor), roughness: 0.5 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(hairColor), roughness: 0.75 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e1b18, roughness: 0.3 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+
+    const hipHeight = 0.44 * scaleH;
+    const torsoH = 0.42 * scaleH;
+
+    // 1. Articulated 3D Legs (Hip -> Thigh -> Knee -> Shin -> Shoe)
+    const makeLeg = (zOffset: number) => {
+      const hipPivot = new THREE.Group();
+      hipPivot.position.set(0, hipHeight, zOffset);
+
+      const thighLen = 0.22 * scaleH;
+      const thighGeo = new THREE.CylinderGeometry(0.055 * scaleH, 0.048 * scaleH, thighLen, 10);
+      const thighMesh = new THREE.Mesh(thighGeo, pantsMat);
+      thighMesh.position.y = -thighLen / 2;
+      hipPivot.add(thighMesh);
+
+      const shinPivot = new THREE.Group();
+      shinPivot.position.set(0, -thighLen, 0);
+      hipPivot.add(shinPivot);
+
+      const shinLen = 0.20 * scaleH;
+      const shinGeo = new THREE.CylinderGeometry(0.046 * scaleH, 0.038 * scaleH, shinLen, 10);
+      const shinMesh = new THREE.Mesh(shinGeo, role === 'child' ? skinMat : pantsMat);
+      shinMesh.position.y = -shinLen / 2;
+      shinPivot.add(shinMesh);
+
+      // 3D Shoe
+      const shoeGeo = new THREE.BoxGeometry(0.14 * scaleH, 0.055 * scaleH, 0.075 * scaleH);
+      const shoeMesh = new THREE.Mesh(shoeGeo, shoeMat);
+      shoeMesh.position.set(0.025 * scaleH, -shinLen, 0);
+      shinPivot.add(shoeMesh);
+
+      bodyGroup.add(hipPivot);
+      return { hipPivot, shinPivot };
+    };
+
+    const leftLeg = makeLeg(0.06 * scaleH);
+    const rightLeg = makeLeg(-0.06 * scaleH);
+
+    // 2. Sculpted 3D Torso & Outfit Details
+    const torsoGroup = new THREE.Group();
+    torsoGroup.position.set(0, hipHeight + torsoH / 2, 0);
+    if (role === 'elder') {
+      torsoGroup.rotation.z = -0.10; // Natural gentle forward stoop
+    }
+    bodyGroup.add(torsoGroup);
+
+    const torsoGeo = new THREE.CylinderGeometry(0.11 * scaleH, 0.095 * scaleH, torsoH, 14);
+    torsoGeo.scale(1.0, 1.0, 0.72);
+    const torsoMesh = new THREE.Mesh(torsoGeo, coatMat);
+    torsoGroup.add(torsoMesh);
+
+    if (role === 'adult') {
+      // White Dress Shirt V-Neck & Red Silk Tie
+      const shirtGeo = new THREE.BoxGeometry(0.06, 0.16, 0.12);
+      const shirtMesh = new THREE.Mesh(shirtGeo, whiteMat);
+      shirtMesh.position.set(0.07, 0.09, 0);
+      torsoGroup.add(shirtMesh);
+
+      const tieMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
+      const tieGeo = new THREE.BoxGeometry(0.03, 0.15, 0.04);
+      const tieMesh = new THREE.Mesh(tieGeo, tieMat);
+      tieMesh.position.set(0.105, 0.06, 0);
+      torsoGroup.add(tieMesh);
+    } else if (role === 'child') {
+      // 3D School Backpack on Back
+      const packMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 });
+      const packGeo = new THREE.BoxGeometry(0.11, 0.24, 0.16);
+      const packMesh = new THREE.Mesh(packGeo, packMat);
+      packMesh.position.set(-0.11, 0.02, 0);
+      torsoGroup.add(packMesh);
+    } else if (role === 'teen') {
+      // 3D Draped Hoodie Hood behind neck
+      const hoodGeo = new THREE.TorusGeometry(0.08, 0.038, 8, 14);
+      const hoodMesh = new THREE.Mesh(hoodGeo, coatMat);
+      hoodMesh.position.set(-0.04, torsoH / 2, 0);
+      hoodMesh.rotation.x = Math.PI / 2;
+      torsoGroup.add(hoodMesh);
+    } else if (role === 'vendor') {
+      // Barista/Artisan Brown Apron
+      const apronMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+      const apronGeo = new THREE.BoxGeometry(0.16, torsoH * 0.88, 0.165);
+      const apronMesh = new THREE.Mesh(apronGeo, apronMat);
+      apronMesh.position.set(0.03, -0.02, 0);
+      torsoGroup.add(apronMesh);
+    }
+
+    // 3. 3D Head, Facial Features (Eyes, Nose, Ears) & Hair/Headgear
+    const headGroup = new THREE.Group();
+    headGroup.position.set(role === 'elder' ? 0.04 : 0, hipHeight + torsoH + 0.13 * scaleH, 0);
+    bodyGroup.add(headGroup);
+
+    // Neck
+    const neckGeo = new THREE.CylinderGeometry(0.042 * scaleH, 0.048 * scaleH, 0.09 * scaleH, 10);
+    const neckMesh = new THREE.Mesh(neckGeo, skinMat);
+    neckMesh.position.y = -0.09 * scaleH;
+    headGroup.add(neckMesh);
+
+    // Cranium Sphere
+    const headR = 0.125 * scaleH;
+    const headGeo = new THREE.SphereGeometry(headR, 18, 16);
+    headGeo.scale(1.02, 1.08, 0.92);
+    const headMesh = new THREE.Mesh(headGeo, skinMat);
+    headGroup.add(headMesh);
+
+    // 3D Sculpted Nose
+    const noseGeo = new THREE.ConeGeometry(0.024 * scaleH, 0.06 * scaleH, 8);
+    const noseMesh = new THREE.Mesh(noseGeo, skinMat);
+    noseMesh.rotation.z = -Math.PI / 2;
+    noseMesh.position.set(headR * 1.02, 0, 0);
+    headGroup.add(noseMesh);
+
+    // 3D Eyes (Left & Right)
+    for (const sideZ of [-0.045 * scaleH, 0.045 * scaleH]) {
+      const eyeWGeo = new THREE.SphereGeometry(0.022 * scaleH, 8, 8);
+      const eyeW = new THREE.Mesh(eyeWGeo, whiteMat);
+      eyeW.position.set(headR * 0.86, 0.02 * scaleH, sideZ);
+      headGroup.add(eyeW);
+
+      const pupilGeo = new THREE.SphereGeometry(0.012 * scaleH, 8, 8);
+      const pupil = new THREE.Mesh(pupilGeo, darkMat);
+      pupil.position.set(headR * 0.96, 0.02 * scaleH, sideZ);
+      headGroup.add(pupil);
+    }
+
+    // Hair & Headwear
+    const capGeo = new THREE.SphereGeometry(headR * 1.06, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58);
+    const hairDome = new THREE.Mesh(capGeo, hairMat);
+    hairDome.position.y = 0.01 * scaleH;
+    hairDome.rotation.z = 0.15;
+    headGroup.add(hairDome);
+
+    if (role === 'child') {
+      // Red Baseball Cap Visor
+      const visorMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.5 });
+      hairDome.material = visorMat;
+      const brimGeo = new THREE.BoxGeometry(0.14 * scaleH, 0.02 * scaleH, 0.16 * scaleH);
+      const brimMesh = new THREE.Mesh(brimGeo, visorMat);
+      brimMesh.position.set(headR * 0.85, 0.04 * scaleH, 0);
+      headGroup.add(brimMesh);
+    } else if (role === 'vendor') {
+      // Vintage Tweed Flat Cap
+      const flatCapMat = new THREE.MeshStandardMaterial({ color: 0x57534e, roughness: 0.8 });
+      hairDome.material = flatCapMat;
+      const brimGeo = new THREE.BoxGeometry(0.12 * scaleH, 0.02 * scaleH, 0.15 * scaleH);
+      const brimMesh = new THREE.Mesh(brimGeo, flatCapMat);
+      brimMesh.position.set(headR * 0.8, 0.05 * scaleH, 0);
+      headGroup.add(brimMesh);
+    } else if (role === 'teen') {
+      // 3D Over-Ear Studio Headphones
+      const hpBandGeo = new THREE.TorusGeometry(headR * 1.08, 0.016, 8, 16, Math.PI);
+      const hpBandMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.5, roughness: 0.3 });
+      const hpBand = new THREE.Mesh(hpBandGeo, hpBandMat);
+      hpBand.rotation.y = Math.PI / 2;
+      headGroup.add(hpBand);
+
+      const cupGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.03, 12);
+      cupGeo.rotateX(Math.PI / 2);
+      const cupMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.4, roughness: 0.3 });
+      const cupL = new THREE.Mesh(cupGeo, cupMat);
+      cupL.position.set(0, 0, headR * 0.98);
+      headGroup.add(cupL);
+      const cupR = new THREE.Mesh(cupGeo, cupMat);
+      cupR.position.set(0, 0, -headR * 0.98);
+      headGroup.add(cupR);
+    } else if (role === 'elder') {
+      // Gold-Rimmed Spectacles
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.2 });
+      for (const sideZ of [-0.045 * scaleH, 0.045 * scaleH]) {
+        const rimGeo = new THREE.TorusGeometry(0.028 * scaleH, 0.005, 6, 12);
+        rimGeo.rotateY(Math.PI / 2);
+        const rim = new THREE.Mesh(rimGeo, glassMat);
+        rim.position.set(headR * 0.98, 0.02 * scaleH, sideZ);
+        headGroup.add(rim);
+      }
+    }
+
+    // 4. Articulated 3D Arms & Props
+    const makeArm = (zOffset: number, isFront: boolean) => {
+      const armPivot = new THREE.Group();
+      armPivot.position.set(0, hipHeight + torsoH - 0.05 * scaleH, zOffset);
+
+      const armLen = 0.32 * scaleH;
+      const armGeo = new THREE.CylinderGeometry(0.040 * scaleH, 0.032 * scaleH, armLen, 10);
+      const armMesh = new THREE.Mesh(armGeo, coatMat);
+      armMesh.position.y = -armLen / 2;
+      armPivot.add(armMesh);
+
+      const handGeo = new THREE.SphereGeometry(0.038 * scaleH, 8, 8);
+      const handMesh = new THREE.Mesh(handGeo, skinMat);
+      handMesh.position.y = -armLen;
+      armPivot.add(handMesh);
+
+      // Attach 3D Props to Hands
+      if (isFront) {
+        if (role === 'adult') {
+          // Takeaway Coffee Cup
+          const cupGeo = new THREE.CylinderGeometry(0.038, 0.028, 0.11, 10);
+          const cupMesh = new THREE.Mesh(cupGeo, whiteMat);
+          cupMesh.position.set(0.05, -armLen + 0.04, 0);
+          armPivot.add(cupMesh);
+        } else if (role === 'teen') {
+          // Glowing Smartphone
+          const phoneGeo = new THREE.BoxGeometry(0.06, 0.09, 0.015);
+          const phoneMat = new THREE.MeshStandardMaterial({
+            color: 0x0f172a,
+            emissive: 0x38bdf8,
+            emissiveIntensity: 0.6,
+          });
+          const phoneMesh = new THREE.Mesh(phoneGeo, phoneMat);
+          phoneMesh.position.set(0.06, -armLen + 0.03, 0);
+          armPivot.add(phoneMesh);
+        } else if (role === 'elder') {
+          // 3D Wooden Walking Cane
+          const caneMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.5 });
+          const caneGeo = new THREE.CylinderGeometry(0.016, 0.012, 0.52, 8);
+          const caneMesh = new THREE.Mesh(caneGeo, caneMat);
+          caneMesh.position.set(0.06, -armLen - 0.18, 0);
+          armPivot.add(caneMesh);
+        }
+      } else if (role === 'adult') {
+        // Leather Briefcase in Back Hand
+        const bagMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.6 });
+        const bagGeo = new THREE.BoxGeometry(0.22, 0.16, 0.06);
+        const bagMesh = new THREE.Mesh(bagGeo, bagMat);
+        bagMesh.position.set(0, -armLen - 0.08, 0);
+        armPivot.add(bagMesh);
+      }
+
+      bodyGroup.add(armPivot);
+      return armPivot;
+    };
+
+    const leftArmPivot = makeArm(0.13 * scaleH, true);
+    const rightArmPivot = makeArm(-0.13 * scaleH, false);
+
+    let balloonGroup: THREE.Group | undefined;
+    if (role === 'child' && p.balloonColor) {
+      balloonGroup = this.create3DBalloonGroup(p.balloonColor, 0.85);
+      balloonGroup.position.set(0.08, 0.45, 0.12);
+      bodyGroup.add(balloonGroup);
+    }
+
+    return {
+      root,
+      type: p.type,
+      bodyGroup,
+      headGroup,
+      leftLegPivot: leftLeg.hipPivot,
+      leftShinPivot: leftLeg.shinPivot,
+      rightLegPivot: rightLeg.hipPivot,
+      rightShinPivot: rightLeg.shinPivot,
+      leftArmPivot,
+      rightArmPivot,
+      balloonGroup,
+    };
+  }
+
+  private createDog3D(p: Pedestrian): Pedestrian3DRig {
+    const root = new THREE.Group();
+    const bodyGroup = new THREE.Group();
+    root.add(bodyGroup);
+
+    const furMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.75 });
+    const creamMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.8 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.3 });
+    const collarMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 });
+
+    // Torso
+    const torsoGeo = new THREE.CylinderGeometry(0.10, 0.11, 0.42, 12);
+    torsoGeo.rotateZ(Math.PI / 2);
+    const torsoMesh = new THREE.Mesh(torsoGeo, furMat);
+    torsoMesh.position.set(0, 0.24, 0);
+    bodyGroup.add(torsoMesh);
+
+    // Cream chest ruff
+    const chestGeo = new THREE.SphereGeometry(0.105, 10, 10);
+    const chestMesh = new THREE.Mesh(chestGeo, creamMat);
+    chestMesh.position.set(0.18, 0.23, 0);
+    bodyGroup.add(chestMesh);
+
+    // Collar
+    const colGeo = new THREE.TorusGeometry(0.105, 0.02, 8, 14);
+    colGeo.rotateY(Math.PI / 2);
+    const colMesh = new THREE.Mesh(colGeo, collarMat);
+    colMesh.position.set(0.19, 0.28, 0);
+    colMesh.rotation.z = -0.4;
+    bodyGroup.add(colMesh);
+
+    // Head, Snout & Perky Ears
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0.26, 0.38, 0);
+    bodyGroup.add(headGroup);
+
+    const skullGeo = new THREE.SphereGeometry(0.11, 14, 12);
+    const skull = new THREE.Mesh(skullGeo, furMat);
+    headGroup.add(skull);
+
+    const snoutGeo = new THREE.ConeGeometry(0.065, 0.14, 10);
+    snoutGeo.rotateZ(-Math.PI / 2);
+    const snout = new THREE.Mesh(snoutGeo, creamMat);
+    snout.position.set(0.11, -0.02, 0);
+    headGroup.add(snout);
+
+    const noseGeo = new THREE.SphereGeometry(0.025, 8, 8);
+    const nose = new THREE.Mesh(noseGeo, darkMat);
+    nose.position.set(0.18, 0, 0);
+    headGroup.add(nose);
+
+    for (const sideZ of [-0.05, 0.05]) {
+      const earGeo = new THREE.ConeGeometry(0.04, 0.10, 6);
+      const ear = new THREE.Mesh(earGeo, furMat);
+      ear.position.set(-0.02, 0.12, sideZ);
+      headGroup.add(ear);
+
+      const eyeGeo = new THREE.SphereGeometry(0.018, 8, 8);
+      const eye = new THREE.Mesh(eyeGeo, darkMat);
+      eye.position.set(0.08, 0.03, sideZ);
+      headGroup.add(eye);
+    }
+
+    // Wagging Curled Tail
+    const dogTail = new THREE.Group();
+    dogTail.position.set(-0.21, 0.30, 0);
+    const tailGeo = new THREE.TorusGeometry(0.07, 0.028, 8, 12, Math.PI * 1.2);
+    const tailMesh = new THREE.Mesh(tailGeo, furMat);
+    tailMesh.position.set(-0.04, 0.05, 0);
+    dogTail.add(tailMesh);
+    bodyGroup.add(dogTail);
+
+    // 4 Articulated Legs
+    const makeDogLeg = (lx: number, lz: number) => {
+      const pivot = new THREE.Group();
+      pivot.position.set(lx, 0.20, lz);
+      const legGeo = new THREE.CylinderGeometry(0.032, 0.024, 0.20, 8);
+      const leg = new THREE.Mesh(legGeo, furMat);
+      leg.position.y = -0.10;
+      pivot.add(leg);
+
+      const pawGeo = new THREE.SphereGeometry(0.03, 8, 8);
+      const paw = new THREE.Mesh(pawGeo, creamMat);
+      paw.position.set(0.015, -0.19, 0);
+      pivot.add(paw);
+      bodyGroup.add(pivot);
+      return pivot;
+    };
+
+    const dogFL = makeDogLeg(0.14, 0.06);
+    const dogFR = makeDogLeg(0.14, -0.06);
+    const dogBL = makeDogLeg(-0.14, 0.06);
+    const dogBR = makeDogLeg(-0.14, -0.06);
+
+    return {
+      root,
+      type: 'dog',
+      bodyGroup,
+      headGroup,
+      dogFL,
+      dogFR,
+      dogBL,
+      dogBR,
+      dogTail,
+    };
+  }
+
+  private createVendorAndCart3D(p: Pedestrian): Pedestrian3DRig {
+    // 1. Start with the 3D Vendor Humanoid walking behind the cart
+    const vendorRig = this.createHumanoid3D(p, 0.95, '#f8fafc', '#334155', '#451a03', '#3b2818', 'vendor');
+    vendorRig.bodyGroup.position.x = -0.44;
+
+    // 2. Build 3D Vintage Wooden Street-Food Cart in front of Vendor (x = +0.26)
+    const cartGroup = new THREE.Group();
+    cartGroup.position.set(0.26, 0, 0);
+    vendorRig.root.add(cartGroup);
+
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.65 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.7, roughness: 0.3 });
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x1c1917, metalness: 0.5, roughness: 0.5 });
+
+    // Wooden Cart Chest
+    const chestGeo = new THREE.BoxGeometry(0.68, 0.34, 0.42);
+    const chestMesh = new THREE.Mesh(chestGeo, woodMat);
+    chestMesh.position.y = 0.34;
+    cartGroup.add(chestMesh);
+
+    // Glass Display Case on Countertop
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0xe0f2fe,
+      transparent: true,
+      opacity: 0.55,
+      roughness: 0.15,
+    });
+    const caseGeo = new THREE.BoxGeometry(0.50, 0.18, 0.34);
+    const caseMesh = new THREE.Mesh(caseGeo, glassMat);
+    caseMesh.position.y = 0.60;
+    cartGroup.add(caseMesh);
+
+    // Brass Canopy Poles & Striped Awning Roof
+    for (const px of [-0.28, 0.28]) {
+      for (const pz of [-0.16, 0.16]) {
+        const poleGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.48, 6);
+        const pole = new THREE.Mesh(poleGeo, brassMat);
+        pole.position.set(px, 0.74, pz);
+        cartGroup.add(pole);
+      }
+    }
+
+    const awningMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(p.color), roughness: 0.6 });
+    const awningGeo = new THREE.BoxGeometry(0.74, 0.12, 0.48);
+    const awningMesh = new THREE.Mesh(awningGeo, awningMat);
+    awningMesh.position.y = 0.98;
+    cartGroup.add(awningMesh);
+
+    // 2 Rotating 3D Spoked Wheels
+    const makeWheel = (wx: number, r: number) => {
+      const wGroup = new THREE.Group();
+      wGroup.position.set(wx, r, 0.23);
+
+      const rimGeo = new THREE.TorusGeometry(r, 0.025, 8, 20);
+      const rim = new THREE.Mesh(rimGeo, ironMat);
+      wGroup.add(rim);
+
+      for (let s = 0; s < 4; s++) {
+        const spkGeo = new THREE.CylinderGeometry(0.012, 0.012, r * 2, 6);
+        const spk = new THREE.Mesh(spkGeo, woodMat);
+        spk.rotation.z = (s * Math.PI) / 4;
+        wGroup.add(spk);
+      }
+
+      const hubGeo = new THREE.SphereGeometry(0.038, 8, 8);
+      const hub = new THREE.Mesh(hubGeo, brassMat);
+      wGroup.add(hub);
+
+      cartGroup.add(wGroup);
+      return wGroup;
+    };
+
+    const wheelBack = makeWheel(-0.18, 0.17);
+    const wheelFront = makeWheel(0.18, 0.17);
+
+    if (p.balloonColor) {
+      const bGroup = this.create3DBalloonGroup(p.balloonColor, 0.65);
+      bGroup.position.set(0.28, 0.98, 0);
+      cartGroup.add(bGroup);
+      vendorRig.balloonGroup = bGroup;
+    }
+
+    vendorRig.wheelFront = wheelFront;
+    vendorRig.wheelBack = wheelBack;
+    return vendorRig;
+  }
+
+  private createPedestrian3DRig(p: Pedestrian): Pedestrian3DRig {
+    switch (p.type) {
+      case 'dog':
+        return this.createDog3D(p);
+      case 'cart':
+        return this.createVendorAndCart3D(p);
+      case 'child':
+        return this.createHumanoid3D(p, 0.76, p.color, '#2563eb', '#ef4444', '#451a03', 'child');
+      case 'elder':
+        return this.createHumanoid3D(p, 0.94, '#78716c', '#44403c', '#292524', '#e7e5e4', 'elder');
+      case 'teen':
+        return this.createHumanoid3D(p, 0.96, p.color, '#334155', '#f8fafc', '#ca8a04', 'teen');
+      case 'adult':
+      default:
+        return this.createHumanoid3D(p, 1.0, p.color, '#1e293b', '#451a03', '#292018', 'adult');
+    }
+  }
+
+  private syncPedestrians3D(pedestrians: Pedestrian[], timeSec: number) {
+    const activeIds = new Set<string>();
+
+    for (let i = 0; i < pedestrians.length; i++) {
+      const p = pedestrians[i];
+      activeIds.add(p.id);
+
+      let rig = this.pedestrianRigs.get(p.id);
+      if (!rig) {
+        rig = this.createPedestrian3DRig(p);
+        this.pedestrianRigs.set(p.id, rig);
+        this.scene.add(rig.root);
+      }
+
+      // Convert pixel coordinates (p.x, p.y = 104) to 3D Bridge Walkway coordinates
+      const worldX = (p.x - 480) / 50;
+      const worldY = (270 - p.y) / 50;
+      // Stagger Z slightly per pedestrian so they pass each other smoothly in 3D without z-fighting
+      const worldZ = 0.42 + (i % 3) * 0.08;
+
+      rig.root.position.set(worldX, worldY, worldZ);
+      rig.root.scale.x = p.direction;
+
+      // Animate 3D Articulated Limbs & Gait
+      const phase = p.walkFrame * 7.5;
+      const stride = Math.sin(phase) * 0.52;
+      const bob = Math.abs(Math.cos(phase)) * 0.035;
+
+      if (rig.type === 'dog') {
+        rig.bodyGroup.position.y = Math.abs(Math.sin(phase * 1.5)) * 0.04;
+        const trot = Math.sin(phase * 1.5) * 0.6;
+        if (rig.dogFL) rig.dogFL.rotation.z = trot;
+        if (rig.dogBR) rig.dogBR.rotation.z = trot;
+        if (rig.dogFR) rig.dogFR.rotation.z = -trot;
+        if (rig.dogBL) rig.dogBL.rotation.z = -trot;
+        if (rig.dogTail) rig.dogTail.rotation.z = Math.sin(timeSec * 14) * 0.35;
+      } else {
+        rig.bodyGroup.position.y = bob;
+        if (rig.leftLegPivot) rig.leftLegPivot.rotation.z = stride;
+        if (rig.rightLegPivot) rig.rightLegPivot.rotation.z = -stride;
+        if (rig.leftShinPivot) rig.leftShinPivot.rotation.z = -Math.max(0, Math.cos(phase)) * 0.45;
+        if (rig.rightShinPivot) rig.rightShinPivot.rotation.z = -Math.max(0, -Math.cos(phase)) * 0.45;
+
+        if (rig.type === 'cart') {
+          // Vendor hands reach forward to push cart handles
+          if (rig.leftArmPivot) rig.leftArmPivot.rotation.z = 0.75;
+          if (rig.rightArmPivot) rig.rightArmPivot.rotation.z = 0.70;
+          if (rig.wheelFront) rig.wheelFront.rotation.z = -p.walkFrame * 4.5;
+          if (rig.wheelBack) rig.wheelBack.rotation.z = -p.walkFrame * 4.5;
+        } else {
+          if (rig.leftArmPivot) {
+            rig.leftArmPivot.rotation.z =
+              rig.type === 'child' ? 0.55 : rig.type === 'elder' ? 0.42 : -stride * 0.75;
+          }
+          if (rig.rightArmPivot) {
+            rig.rightArmPivot.rotation.z = stride * 0.75;
+          }
+        }
+
+        if (rig.balloonGroup) {
+          rig.balloonGroup.rotation.z = Math.sin(timeSec * 2.5 + i) * 0.08;
+        }
+      }
+    }
+
+    // Clean up any removed pedestrians
+    for (const [id, rig] of this.pedestrianRigs.entries()) {
+      if (!activeIds.has(id)) {
+        this.scene.remove(rig.root);
+        this.pedestrianRigs.delete(id);
+      }
+    }
+  }
+
+  /* ============================================================================
+   * 3D FALLING TRASH, RAINDROPS & FLOATING RIVER TRASH (掉落物 3D 元件)
+   * ============================================================================ */
+
+  private createTrash3DGroup(type: TrashType): THREE.Group {
+    const group = new THREE.Group();
+
+    switch (type) {
+      // T01: 3D Cigarette Butt (菸蒂)
+      case 'T01': {
+        const paperGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.36, 12);
+        const paperMat = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7 });
+        const paper = new THREE.Mesh(paperGeo, paperMat);
+        paper.position.y = 0.08;
+        group.add(paper);
+
+        const filterGeo = new THREE.CylinderGeometry(0.092, 0.092, 0.20, 12);
+        const filterMat = new THREE.MeshStandardMaterial({ color: 0xd9822b, roughness: 0.6 });
+        const filter = new THREE.Mesh(filterGeo, filterMat);
+        filter.position.y = -0.18;
+        group.add(filter);
+
+        const emberGeo = new THREE.SphereGeometry(0.088, 10, 10);
+        const emberMat = new THREE.MeshStandardMaterial({
+          color: 0xdc2626,
+          emissive: 0xef4444,
+          emissiveIntensity: 0.7,
+        });
+        const ember = new THREE.Mesh(emberGeo, emberMat);
+        ember.position.y = 0.26;
+        group.add(ember);
+        break;
+      }
+
+      // T02: 3D Translucent PET Bottle (寶特瓶)
+      case 'T02': {
+        const bottleMat = new THREE.MeshStandardMaterial({
+          color: 0x7dd3fc,
+          transparent: true,
+          opacity: 0.85,
+          roughness: 0.15,
+          metalness: 0.1,
+        });
+        const bodyGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.42, 16);
+        const body = new THREE.Mesh(bodyGeo, bottleMat);
+        body.position.y = -0.06;
+        group.add(body);
+
+        const neckGeo = new THREE.ConeGeometry(0.16, 0.16, 16);
+        const neck = new THREE.Mesh(neckGeo, bottleMat);
+        neck.position.y = 0.22;
+        group.add(neck);
+
+        const labelGeo = new THREE.CylinderGeometry(0.165, 0.165, 0.14, 16);
+        const labelMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+        const label = new THREE.Mesh(labelGeo, labelMat);
+        label.position.y = -0.04;
+        group.add(label);
+
+        const capGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.08, 12);
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.3 });
+        const cap = new THREE.Mesh(capGeo, capMat);
+        cap.position.y = 0.31;
+        group.add(cap);
+        break;
+      }
+
+      // T03: 3D Metallic Aluminum Beverage Can (飲料罐)
+      case 'T03': {
+        const canGeo = new THREE.CylinderGeometry(0.17, 0.17, 0.46, 18);
+        const canMat = new THREE.MeshStandardMaterial({
+          color: 0xdc2626,
+          metalness: 0.55,
+          roughness: 0.28,
+        });
+        const can = new THREE.Mesh(canGeo, canMat);
+        group.add(can);
+
+        const stripeGeo = new THREE.CylinderGeometry(0.174, 0.174, 0.14, 18);
+        const stripeMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.4 });
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        group.add(stripe);
+
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.2 });
+        const rimTopGeo = new THREE.CylinderGeometry(0.155, 0.17, 0.04, 18);
+        const rimTop = new THREE.Mesh(rimTopGeo, rimMat);
+        rimTop.position.y = 0.24;
+        group.add(rimTop);
+
+        const rimBot = new THREE.Mesh(rimTopGeo, rimMat);
+        rimBot.position.y = -0.24;
+        group.add(rimBot);
+        break;
+      }
+
+      // T04: 3D Foil Juice Carton with Straw (鋁箔飲料盒)
+      case 'T04': {
+        const boxGeo = new THREE.BoxGeometry(0.32, 0.46, 0.22);
+        const boxMat = new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.45 });
+        const box = new THREE.Mesh(boxGeo, boxMat);
+        box.position.y = -0.04;
+        group.add(box);
+
+        // Fruit emblem sphere
+        const fruitGeo = new THREE.SphereGeometry(0.09, 12, 10);
+        fruitGeo.scale(1, 1, 0.3);
+        const fruitMat = new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 });
+        const fruit = new THREE.Mesh(fruitGeo, fruitMat);
+        fruit.position.set(0, -0.04, 0.10);
+        group.add(fruit);
+
+        // 3D Bent Drinking Straw
+        const strawMat = new THREE.MeshStandardMaterial({ color: 0xfef2f2, roughness: 0.3 });
+        const straw1 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.18, 8), strawMat);
+        straw1.position.set(-0.05, 0.24, 0);
+        group.add(straw1);
+
+        const straw2 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 8), strawMat);
+        straw2.position.set(0.0, 0.33, 0);
+        straw2.rotation.z = -1.1;
+        group.add(straw2);
+        break;
+      }
+
+      // T05: 3D Plump Tied Trash Sack / Snack Bag (塑膠袋/垃圾袋)
+      case 'T05': {
+        const sackMat = new THREE.MeshStandardMaterial({
+          color: 0xc27832,
+          roughness: 0.55,
+          metalness: 0.05,
+        });
+        const sackGeo = new THREE.SphereGeometry(0.22, 16, 14);
+        sackGeo.scale(1.05, 0.92, 0.95);
+        const sack = new THREE.Mesh(sackGeo, sackMat);
+        sack.position.y = -0.08;
+        group.add(sack);
+
+        // Tied cord knot ring
+        const tieGeo = new THREE.TorusGeometry(0.08, 0.024, 8, 14);
+        tieGeo.rotateX(Math.PI / 2);
+        const tieMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.7 });
+        const tie = new THREE.Mesh(tieGeo, tieMat);
+        tie.position.y = 0.11;
+        group.add(tie);
+
+        // Flared ruffled top ears
+        const earGeo = new THREE.ConeGeometry(0.14, 0.18, 7);
+        earGeo.rotateX(Math.PI);
+        const ear = new THREE.Mesh(earGeo, sackMat);
+        ear.position.y = 0.20;
+        group.add(ear);
+        break;
+      }
+
+      // T06: 3D Coiled Poop (排泄物)
+      case 'T06':
+      default: {
+        const poopMat = new THREE.MeshStandardMaterial({
+          color: 0x783f12,
+          roughness: 0.35,
+          metalness: 0.08,
+        });
+        const coil1 = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.075, 10, 18), poopMat);
+        coil1.rotation.x = Math.PI / 2;
+        coil1.position.y = -0.14;
+        group.add(coil1);
+
+        const coil2 = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.065, 10, 18), poopMat);
+        coil2.rotation.x = Math.PI / 2;
+        coil2.position.y = -0.02;
+        group.add(coil2);
+
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.18, 12), poopMat);
+        tip.position.y = 0.13;
+        group.add(tip);
+        break;
+      }
+    }
+
+    return group;
+  }
+
+  private createRaindrop3DGroup(): THREE.Group {
+    const group = new THREE.Group();
+
+    const dropMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.45,
+      roughness: 0.08,
+      metalness: 0.15,
+      transparent: true,
+      opacity: 0.92,
+    });
+
+    // Bottom droplet bulb
+    const bulbGeo = new THREE.SphereGeometry(0.16, 18, 16);
+    const bulb = new THREE.Mesh(bulbGeo, dropMat);
+    bulb.position.y = -0.06;
+    group.add(bulb);
+
+    // Tapered droplet top cone
+    const coneGeo = new THREE.ConeGeometry(0.16, 0.28, 18);
+    const cone = new THREE.Mesh(coneGeo, dropMat);
+    cone.position.y = 0.08;
+    group.add(cone);
+
+    // Bright inner core highlight
+    const coreGeo = new THREE.SphereGeometry(0.07, 10, 10);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.set(-0.04, -0.04, 0.08);
+    group.add(core);
+
+    return group;
+  }
+
+  private syncFallingTrash3D(trashList: TrashObject[], timeSec: number) {
+    const activeIds = new Set<string>();
+
+    for (let i = 0; i < trashList.length; i++) {
+      const t = trashList[i];
+      if (t.isCaught || t.isSplashed) continue;
+      activeIds.add(t.id);
+
+      let meshGroup = this.trashMeshes.get(t.id);
+      if (!meshGroup) {
+        meshGroup = this.createTrash3DGroup(t.type);
+        this.trashMeshes.set(t.id, meshGroup);
+        this.scene.add(meshGroup);
+      }
+
+      const wx = (t.x - 480) / 50;
+      const wy = (270 - t.y) / 50;
+      meshGroup.position.set(wx, wy, 0.30);
+
+      // Dynamic 3-axis 3D tumbling while falling
+      meshGroup.rotation.z = -t.rotation;
+      meshGroup.rotation.x = timeSec * 2.4 + i * 1.1;
+      meshGroup.rotation.y = timeSec * 1.9 + i * 0.7;
+    }
+
+    for (const [id, meshGroup] of this.trashMeshes.entries()) {
+      if (!activeIds.has(id)) {
+        this.scene.remove(meshGroup);
+        this.trashMeshes.delete(id);
+      }
+    }
+  }
+
+  private syncRaindrops3D(raindropList: RaindropObject[], timeSec: number) {
+    const activeIds = new Set<string>();
+
+    for (let i = 0; i < raindropList.length; i++) {
+      const r = raindropList[i];
+      if (r.isCaught) continue;
+      activeIds.add(r.id);
+
+      let meshGroup = this.raindropMeshes.get(r.id);
+      if (!meshGroup) {
+        meshGroup = this.createRaindrop3DGroup();
+        this.raindropMeshes.set(r.id, meshGroup);
+        this.scene.add(meshGroup);
+      }
+
+      const wx = (r.x - 480) / 50;
+      const wy = (270 - r.y) / 50;
+      meshGroup.position.set(wx, wy, 0.32);
+      meshGroup.rotation.y = timeSec * 3.5 + i;
+      const pulse = 1 + Math.sin(timeSec * 8 + i) * 0.08;
+      meshGroup.scale.setScalar(pulse);
+    }
+
+    for (const [id, meshGroup] of this.raindropMeshes.entries()) {
+      if (!activeIds.has(id)) {
+        this.scene.remove(meshGroup);
+        this.raindropMeshes.delete(id);
+      }
+    }
+  }
+
+  private syncVisibleRiverTrash3D(visibleRiverTrash: VisibleRiverTrash[], timeSec: number) {
+    const activeIds = new Set<string>();
+
+    for (let i = 0; i < visibleRiverTrash.length; i++) {
+      const vt = visibleRiverTrash[i];
+      activeIds.add(vt.id);
+
+      let meshGroup = this.riverTrashMeshes.get(vt.id);
+      if (!meshGroup) {
+        meshGroup = this.createTrash3DGroup(vt.type);
+        meshGroup.scale.setScalar(0.82);
+        this.riverTrashMeshes.set(vt.id, meshGroup);
+        this.scene.add(meshGroup);
+      }
+
+      const bob = Math.sin(timeSec * vt.bobSpeed + vt.bobOffset) * 3.5;
+      const wx = (vt.x - 480) / 50;
+      const wy = (270 - (vt.y + bob)) / 50;
+      meshGroup.position.set(wx, wy, 0.75);
+
+      // Bobbing and pitching with the 3D river waves
+      meshGroup.rotation.z = -vt.rotation + Math.sin(timeSec * 2.5 + vt.bobOffset) * 0.22;
+      meshGroup.rotation.x = 0.65 + Math.cos(timeSec * 2.0 + vt.bobOffset) * 0.18;
+      meshGroup.rotation.y = vt.bobOffset;
+    }
+
+    for (const [id, meshGroup] of this.riverTrashMeshes.entries()) {
+      if (!activeIds.has(id)) {
+        this.scene.remove(meshGroup);
+        this.riverTrashMeshes.delete(id);
+      }
+    }
+  }
+
   private buildRiverWater() {
-    // 3D River Water Surface Plane extending from deep inside arches (Z = -4.2) to foreground (Z = +6.6)
-    // At Z = 0, Y = -3.20 (y_px = 430). Tilted slightly downward toward foreground so it fills y_px = 430..540
     const waterGeo = new THREE.PlaneGeometry(24.0, 11.2, 128, 48);
     waterGeo.rotateX(-Math.PI * 0.435);
 
@@ -640,13 +1554,11 @@ export class ThreeSceneBackground {
           vUv = uv;
           vec3 pos = position;
 
-          // Gerstner-inspired 4-harmonic 3D wave displacement
           float w1 = sin(pos.x * 1.15 + uTime * 2.3) * 0.11;
           float w2 = cos(pos.y * 1.85 - uTime * 1.7 + pos.x * 0.55) * 0.08;
           float w3 = sin((pos.x * 1.9 + pos.y * 2.2) + uTime * 3.2) * 0.045;
           float w4 = cos(pos.x * 4.2 - uTime * 4.0) * 0.022;
 
-          // Amplify waves in foreground (uv.y -> 0), calmer inside arch tunnels (uv.y -> 1)
           float fgFactor = mix(0.25, 1.35, 1.0 - uv.y);
           float elev = (w1 + w2 + w3 + w4) * fgFactor;
 
@@ -680,11 +1592,8 @@ export class ThreeSceneBackground {
 
         void main() {
           float depthT = smoothstep(0.0, 1.0, 1.0 - vUv.y);
-
-          // Base water depth gradient
           vec3 waterCol = mix(uDeepColor, uShallowColor, depthT * 0.78 + vElevation * 2.2);
 
-          // Pier reflection bands in water
           float pierDist1 = abs(vWorldPos.x - (-7.60));
           float pierDist2 = abs(vWorldPos.x - (-2.54));
           float pierDist3 = abs(vWorldPos.x - 2.54);
@@ -695,7 +1604,6 @@ export class ThreeSceneBackground {
             waterCol = mix(waterCol, vec3(0.85, 0.74, 0.58), 0.18 * vUv.y);
           }
 
-          // Directional sunlight & specular sparkles
           vec3 lightDir = normalize(vec3(-0.4, 0.85, 0.45));
           float diff = max(dot(vNormalVec, lightDir), 0.0);
           waterCol += diff * 0.16 * uSunColor;
@@ -703,24 +1611,19 @@ export class ThreeSceneBackground {
           float spec = pow(max(dot(vNormalVec, lightDir), 0.0), 32.0);
           waterCol += spec * 0.52 * uSunColor;
 
-          // Wave crest seafoam & waterline lapping foam
           float foamThresh = mix(0.06, 0.12, depthT);
           float isFoam = smoothstep(foamThresh, foamThresh + 0.04, vElevation);
-          // Continuous foam line near the bridge piers (vUv.y ≈ 0.62)
           float shoreLine = exp(-pow((vUv.y - 0.62) * 28.0 + sin(vWorldPos.x * 2.5 + uTime * 3.0) * 0.6, 2.0));
           waterCol = mix(waterCol, uFoamColor, clamp(isFoam * 0.85 + shoreLine * 0.65, 0.0, 0.92));
 
-          // Colored-pencil cross-hatching grain
           float hatch = mod(gl_FragCoord.x * 0.65 - gl_FragCoord.y * 0.35, 4.0);
           if (hatch < 1.2) {
             waterCol -= vec3(0.045);
           }
 
-          // Dark shadow deep inside arch tunnels (vUv.y > 0.66)
           float tunnelShadow = smoothstep(0.62, 0.85, vUv.y);
           waterCol = mix(waterCol, uDeepColor * 0.32, tunnelShadow);
 
-          // Black pollution iridescent oil sheen
           if (uWaterQuality > 1.5) {
             float oil = sin(vWorldPos.x * 1.8 + vUv.y * 12.0 + uTime * 2.5) * 0.14;
             waterCol += vec3(oil * 0.35, -oil * 0.1, oil * 0.45);
@@ -732,13 +1635,11 @@ export class ThreeSceneBackground {
     });
 
     const waterMesh = new THREE.Mesh(waterGeo, this.waterMat);
-    // Position so that at Z = 0, Y = -3.20 (y_px = 430), and slopes toward camera to cover bottom of screen
     waterMesh.position.set(0, -3.55, 1.2);
     this.scene.add(waterMesh);
   }
 
   private buildVolumetricGodRays() {
-    // 3 Slanted Translucent 3D Sunbeam Planes passing in front of the 3 Arches
     this.godRayMat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
@@ -778,7 +1679,7 @@ export class ThreeSceneBackground {
       const geo = new THREE.PlaneGeometry(rc.w, rc.h);
       const mesh = new THREE.Mesh(geo, this.godRayMat);
       mesh.position.set(rc.x, rc.y, 0.9);
-      mesh.rotation.z = -0.22; // Slanted sunbeam angle
+      mesh.rotation.z = -0.22;
       this.scene.add(mesh);
     }
   }
@@ -830,7 +1731,6 @@ export class ThreeSceneBackground {
       this.stoneMaterials[1]?.color.setHex(0xd6d3d1);
       this.mossMaterials[0]?.color.setHex(0x6b7280);
     } else {
-      // BLACK Polluted
       this.skyMat.uniforms.uTopColor.value.setHex(0x1c1917);
       this.skyMat.uniforms.uBottomColor.value.setHex(0x44403c);
       this.waterMat.uniforms.uWaterQuality.value = 2.0;
@@ -855,9 +1755,20 @@ export class ThreeSceneBackground {
   }
 
   /**
-   * Update 3D Scene animation, water waves, clouds, and interactive camera parallax
+   * Update 3D Scene animation, water waves, clouds, camera parallax,
+   * and 3D entities (pedestrians crowd, falling trash, falling raindrops, floating river trash)
    */
-  public update(timeSec: number, waterQuality: WaterQuality, playerX: number = 480) {
+  public update(
+    timeSec: number,
+    waterQuality: WaterQuality,
+    playerX: number = 480,
+    entities?: {
+      pedestrians: Pedestrian[];
+      trashList: TrashObject[];
+      raindropList: RaindropObject[];
+      visibleRiverTrash: VisibleRiverTrash[];
+    }
+  ) {
     if (!this.isAvailable) return;
 
     this.applyWaterQualityPalette(waterQuality);
@@ -866,7 +1777,7 @@ export class ThreeSceneBackground {
     this.godRayMat.uniforms.uTime.value = timeSec;
 
     // 3D Camera Parallax driven by player horizontal position
-    const pNorm = (playerX - 480) / 480; // -1 .. +1
+    const pNorm = (playerX - 480) / 480;
     this.waterMat.uniforms.uParallax.value = pNorm;
     this.camera.position.x = pNorm * 0.42;
     this.camera.lookAt(pNorm * 0.14, 0, 0);
@@ -884,6 +1795,28 @@ export class ThreeSceneBackground {
       if (cg.position.x < -13.5) {
         cg.position.x = 13.5;
       }
+    }
+
+    // Synchronize 3D Pedestrians & 3D Falling/Floating Items
+    if (entities) {
+      this.syncPedestrians3D(entities.pedestrians, timeSec);
+      this.syncFallingTrash3D(entities.trashList, timeSec);
+      this.syncRaindrops3D(entities.raindropList, timeSec);
+      this.syncVisibleRiverTrash3D(entities.visibleRiverTrash, timeSec);
+    } else {
+      // Autonomous 3D crowd patrol on Start Screen
+      for (const p of this.defaultPedestrians) {
+        p.x += p.direction * p.speed * 0.016;
+        p.walkFrame += 0.016;
+        if (p.x > 870) {
+          p.x = 870;
+          p.direction = -1;
+        } else if (p.x < 90) {
+          p.x = 90;
+          p.direction = 1;
+        }
+      }
+      this.syncPedestrians3D(this.defaultPedestrians, timeSec);
     }
   }
 
