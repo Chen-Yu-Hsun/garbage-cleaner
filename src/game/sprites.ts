@@ -280,9 +280,12 @@ function renderColoredPencilSpriteCanvas(
 }
 
 /**
- * Pre-render High-Definition Realistic 醜泥怪 (Mud & Moss River Guardian)
- * Combines 3D volumetric anatomical shading, thousands of fine botanical moss fibers,
- * wet river mud sheen, embedded pebbles, sprouting fern fronds, and realistic eyes.
+ * Pre-render High-Definition 醜泥怪 (Ugly Mud/Moss Monster)
+ * Faithfully modeled after the official character illustration:
+ * - Tall pear/mound-shaped silhouette covered in long, flowing olive-moss hair locks
+ * - Hand-painted gouache / colored-pencil vertical streaky hair texture & dark umber lock crevices
+ * - Signature droopy, half-lidded world-weary eyes with cream sclera & dark pupils
+ * - Small maroon-red open bean mouth with 2 upper tiny white fangs and 1 lower tiny tooth
  */
 let mossMonsterCanvasCache: HTMLCanvasElement | null = null;
 
@@ -291,281 +294,408 @@ function getMossMonsterCanvas(): HTMLCanvasElement {
   if (typeof document === 'undefined') return null as any;
 
   const w = 240;
-  const h = 260;
+  const h = 268;
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
   const c = canvas.getContext('2d');
   if (!c) return canvas;
 
-  const rand = seededRandom(1307);
-  const cx = w / 2;
-  const cy = h * 0.56;
+  const rand = seededRandom(2026);
+  const cx = w * 0.48; // Slightly left-centered crown & face, with right hair locks sweeping wider
 
-  // 1. Base Volumetric 3D Body Silhouette (Sturdy swamp creature torso, shoulders & limbs)
+  // Helper to trace the organic tall mound silhouette of 醜泥怪
+  const traceSilhouette = () => {
+    c.beginPath();
+    // Top rounded crown
+    c.moveTo(cx - 4, h * 0.055);
+    // Upper-left head & left shoulder bulge
+    c.bezierCurveTo(cx - 52, h * 0.06, cx - 76, h * 0.24, cx - 82, h * 0.46);
+    // Mid-left slight waist curve down to bottom-left base
+    c.bezierCurveTo(cx - 86, h * 0.60, cx - 74, h * 0.74, cx - 76, h * 0.88);
+    c.quadraticCurveTo(cx - 76, h * 0.945, cx - 54, h * 0.955);
+    // Broad flat-ish bottom base
+    c.bezierCurveTo(cx - 18, h * 0.97, cx + 34, h * 0.965, cx + 82, h * 0.945);
+    // Sweeping lower-right moss locks
+    c.quadraticCurveTo(cx + 98, h * 0.93, cx + 92, h * 0.84);
+    c.bezierCurveTo(cx + 84, h * 0.68, cx + 76, h * 0.50, cx + 68, h * 0.34);
+    // Upper-right head slope back to crown
+    c.bezierCurveTo(cx + 58, h * 0.16, cx + 34, h * 0.055, cx - 4, h * 0.055);
+    c.closePath();
+  };
+
   c.save();
-  c.beginPath();
-  // Head crown -> left shoulder -> left arm -> left hip/leg -> bottom base -> right hip -> right arm -> right shoulder
-  c.moveTo(cx, h * 0.10);
-  c.bezierCurveTo(cx - 58, h * 0.10, cx - 84, h * 0.34, cx - 92, h * 0.58);
-  c.bezierCurveTo(cx - 98, h * 0.76, cx - 86, h * 0.92, cx - 58, h * 0.95);
-  c.bezierCurveTo(cx - 20, h * 0.98, cx + 20, h * 0.98, cx + 58, h * 0.95);
-  c.bezierCurveTo(cx + 86, h * 0.92, cx + 98, h * 0.76, cx + 92, h * 0.58);
-  c.bezierCurveTo(cx + 84, h * 0.34, cx + 58, h * 0.10, cx, h * 0.10);
-  c.closePath();
+  traceSilhouette();
 
-  // Deep 3D radial shading (top-left sunlit chartreuse-olive to bottom-right deep swamp peat)
-  const bodyGrad = c.createRadialGradient(cx - 24, h * 0.32, 16, cx, cy, 108);
-  bodyGrad.addColorStop(0, '#8ba862');
-  bodyGrad.addColorStop(0.42, '#5c783c');
-  bodyGrad.addColorStop(0.78, '#384d23');
-  bodyGrad.addColorStop(1, '#1b2611');
+  // 1. Base Olive-Moss Gouache Shading
+  const bodyGrad = c.createLinearGradient(cx - 30, h * 0.06, cx + 35, h * 0.96);
+  bodyGrad.addColorStop(0, '#6a8444');
+  bodyGrad.addColorStop(0.32, '#5a7339');
+  bodyGrad.addColorStop(0.72, '#485e2c');
+  bodyGrad.addColorStop(1, '#31421d');
   c.fillStyle = bodyGrad;
   c.fill();
-
   c.clip();
 
-  // 2. Realistic Multi-Layered Bryophyte Moss Cushions (Volumetric clumps across torso & shoulders)
-  const clumpColors = ['#253617', '#354a21', '#49632f', '#5e7d3f', '#759652', '#8fb068', '#a6c47e'];
-  for (let i = 0; i < 180; i++) {
-    const angle = rand() * Math.PI * 2;
-    const dist = Math.pow(rand(), 0.75) * 95;
-    const mx = cx + Math.cos(angle) * dist;
-    const my = cy - 10 + Math.sin(angle) * dist * 0.95;
-    const mr = 8 + rand() * 16;
+  // 2. Long Flowing Vertical Wavy Hair-Lock Ribbons (Gouache & Oil-Pastel Brushwork)
+  const lockPalette = [
+    '#3d5224',
+    '#49612c',
+    '#567036',
+    '#648040',
+    '#73914b',
+    '#82a158',
+    '#91af66',
+  ];
 
-    // Normalize height for realistic top-down lighting
-    const lightT = Math.max(0, Math.min(1, 1 - (my - h * 0.1) / (h * 0.85) - (mx - cx) / 220));
-    const colIdx = Math.min(
-      clumpColors.length - 1,
-      Math.floor(lightT * (clumpColors.length - 1) + (rand() - 0.4) * 2)
+  // Broad vertical wavy locks from crown to bottom
+  for (let i = 0; i < 140; i++) {
+    const startX = cx - 88 + (i / 140) * 186 + (rand() - 0.5) * 6;
+    const startY = h * (0.05 + rand() * 0.18);
+    const endY = h * (0.65 + rand() * 0.33);
+    const driftX = (startX - cx) * 0.22 + (rand() - 0.5) * 18;
+    const midX1 = startX + driftX * 0.4 + Math.sin(i * 0.7) * 6;
+    const midX2 = startX + driftX * 0.8 - Math.cos(i * 0.5) * 6;
+
+    c.strokeStyle = lockPalette[Math.floor(rand() * lockPalette.length)];
+    c.lineWidth = 3.5 + rand() * 5.5;
+    c.lineCap = 'round';
+    c.globalAlpha = 0.42 + rand() * 0.35;
+
+    c.beginPath();
+    c.moveTo(startX, startY);
+    c.bezierCurveTo(
+      midX1,
+      startY + (endY - startY) * 0.33,
+      midX2,
+      startY + (endY - startY) * 0.66,
+      startX + driftX,
+      endY
     );
-
-    const clumpGrad = c.createRadialGradient(mx - mr * 0.25, my - mr * 0.25, 1, mx, my, mr);
-    clumpGrad.addColorStop(0, clumpColors[Math.min(clumpColors.length - 1, colIdx + 1)]);
-    clumpGrad.addColorStop(0.65, clumpColors[Math.max(0, colIdx)]);
-    clumpGrad.addColorStop(1, 'rgba(24, 36, 14, 0)');
-    c.fillStyle = clumpGrad;
-    c.beginPath();
-    c.arc(mx, my, mr, 0, Math.PI * 2);
-    c.fill();
+    c.stroke();
   }
 
-  // 3. Realistic Wet River Mud & Peat Crevices (Organic dark mud veins & wet specular highlights)
-  for (let m = 0; m < 35; m++) {
-    const mx = cx + (rand() - 0.5) * 140;
-    const my = h * 0.45 + rand() * (h * 0.48);
-    c.fillStyle = 'rgba(38, 26, 16, 0.42)';
-    c.beginPath();
-    c.ellipse(mx, my, 6 + rand() * 12, 3 + rand() * 6, (rand() - 0.5) * 0.8, 0, Math.PI * 2);
-    c.fill();
-  }
+  // 3. Chalky Colored-Pencil / Dry-Brush Vertical Highlights & Deep Moss Strands
+  for (let s = 0; s < 780; s++) {
+    const sx = cx - 86 + rand() * 182;
+    const sy = h * 0.06 + rand() * (h * 0.88);
+    const len = 14 + rand() * 28;
+    // Slight natural wave following the locks downward
+    const slope = ((sx - cx) / 160) * 0.28 + Math.sin(sy * 0.04 + sx * 0.03) * 0.14;
+    const ex = sx + Math.sin(slope) * len;
+    const ey = sy + Math.cos(slope) * len;
 
-  // 4. Thousands of Fine Realistic Moss Strands & Hanging Tendrils
-  c.lineCap = 'round';
-  for (let s = 0; s < 950; s++) {
-    const sx = cx + (rand() - 0.5) * 182;
-    const sy = h * 0.11 + rand() * (h * 0.84);
-    const len = 5 + rand() * 11;
-    // Strands drape downward and outward naturally
-    const outAngle = Math.PI * 0.5 + ((sx - cx) / 110) * 0.55 + (rand() - 0.5) * 0.45;
-    const ex = sx + Math.cos(outAngle) * len;
-    const ey = sy + Math.sin(outAngle) * len;
-
-    const isHighlight = sy < h * 0.42 && rand() > 0.45;
-    c.strokeStyle = isHighlight
-      ? ['#9ebb73', '#b5d18a', '#84a35a'][Math.floor(rand() * 3)]
-      : ['#2b3d1b', '#3e5428', '#526e37', '#688749'][Math.floor(rand() * 4)];
-    c.lineWidth = 0.9 + rand() * 1.3;
-    c.globalAlpha = 0.55 + rand() * 0.4;
+    const isLight = sy < h * 0.68 && rand() > 0.48;
+    c.strokeStyle = isLight
+      ? ['#7f9c56', '#8eab64', '#9cb872', '#6c8845'][Math.floor(rand() * 4)]
+      : ['#2c3b19', '#384a21', '#455929', '#222e13'][Math.floor(rand() * 4)];
+    c.lineWidth = 0.8 + rand() * 1.4;
+    c.globalAlpha = 0.45 + rand() * 0.38;
 
     c.beginPath();
     c.moveTo(sx, sy);
-    c.quadraticCurveTo(
-      (sx + ex) / 2 + (rand() - 0.5) * 4,
-      (sy + ey) / 2 + 2,
-      ex,
-      ey
-    );
+    c.quadraticCurveTo((sx + ex) * 0.5 + (rand() - 0.5) * 3, (sy + ey) * 0.5, ex, ey);
     c.stroke();
   }
-  c.restore();
 
-  // 5. Outer Shaggy Moss Edge Fringes & Sprouting Woodland Clover/Fern on Crown
-  c.save();
-  for (let i = 0; i < 120; i++) {
-    const t = i / 120;
-    const ang = Math.PI * 0.85 + t * Math.PI * 1.3;
-    const rx = 86 + Math.sin(ang * 3) * 5;
-    const ry = 98;
-    const bx = cx + Math.cos(ang) * rx;
-    const by = cy + 6 + Math.sin(ang) * ry;
-    const tuftLen = 5 + rand() * 8;
-    c.strokeStyle = by < cy ? '#6d8c49' : '#2a3b1a';
-    c.lineWidth = 1.6 + rand();
+  // Subtle Bluish-Teal Paint Smudge to the Left of Left Eye (Authentic detail from reference photo)
+  const tealSmudge = c.createRadialGradient(cx - 50, h * 0.33, 2, cx - 50, h * 0.33, 16);
+  tealSmudge.addColorStop(0, 'rgba(36, 128, 102, 0.48)');
+  tealSmudge.addColorStop(1, 'rgba(36, 128, 102, 0)');
+  c.globalAlpha = 1;
+  c.fillStyle = tealSmudge;
+  c.beginPath();
+  c.arc(cx - 50, h * 0.33, 16, 0, Math.PI * 2);
+  c.fill();
+
+  // Deep shadow gradient at bottom base & under-eye area
+  const bottomShade = c.createLinearGradient(0, h * 0.72, 0, h * 0.96);
+  bottomShade.addColorStop(0, 'rgba(28, 38, 16, 0)');
+  bottomShade.addColorStop(1, 'rgba(22, 30, 12, 0.68)');
+  c.fillStyle = bottomShade;
+  c.fillRect(0, h * 0.72, w, h * 0.26);
+
+  // 4. Signature Dark Umber-Brown Hair Lock Crevices & Forehead Bangs Parting
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  const drawCrevice = (pts: [number, number][], width: number, alpha: number = 0.82) => {
+    c.save();
+    c.strokeStyle = '#2b2116';
+    c.lineWidth = width;
+    c.globalAlpha = alpha;
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const xc = (pts[i][0] + pts[i + 1][0]) / 2;
+      const yc = (pts[i][1] + pts[i + 1][1]) / 2;
+      c.quadraticCurveTo(pts[i][0], pts[i][1], xc, yc);
+    }
+    c.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+    c.stroke();
+    c.restore();
+  };
+
+  // Forehead parting & central bang tuft hanging between the eyes
+  drawCrevice(
+    [
+      [cx - 42, h * 0.30],
+      [cx - 28, h * 0.25],
+      [cx - 12, h * 0.19],
+    ],
+    2.4,
+    0.78
+  );
+  // Left cheek long lock crevice running down from outer left eye
+  drawCrevice(
+    [
+      [cx - 41, h * 0.28],
+      [cx - 46, h * 0.36],
+      [cx - 53, h * 0.45],
+    ],
+    2.6,
+    0.85
+  );
+  // Central pointed bang strand dipping between the two eyes
+  drawCrevice(
+    [
+      [cx - 7, h * 0.20],
+      [cx - 8, h * 0.26],
+      [cx - 10, h * 0.32],
+    ],
+    2.5,
+    0.88
+  );
+  drawCrevice(
+    [
+      [cx + 6, h * 0.18],
+      [cx - 2, h * 0.25],
+      [cx - 9, h * 0.32],
+    ],
+    2.5,
+    0.88
+  );
+  // Right brow & long S-curve lock crevices cascading down right side
+  drawCrevice(
+    [
+      [cx + 5, h * 0.20],
+      [cx + 18, h * 0.27],
+      [cx + 35, h * 0.35],
+      [cx + 48, h * 0.43],
+      [cx + 58, h * 0.56],
+    ],
+    2.8,
+    0.88
+  );
+  drawCrevice(
+    [
+      [cx + 26, h * 0.19],
+      [cx + 35, h * 0.27],
+      [cx + 52, h * 0.39],
+      [cx + 64, h * 0.54],
+      [cx + 70, h * 0.68],
+    ],
+    2.6,
+    0.82
+  );
+  drawCrevice(
+    [
+      [cx + 46, h * 0.22],
+      [cx + 58, h * 0.34],
+      [cx + 69, h * 0.48],
+      [cx + 76, h * 0.62],
+    ],
+    2.2,
+    0.72
+  );
+  // Subtle lower vertical lock crevices
+  drawCrevice(
+    [
+      [cx - 22, h * 0.52],
+      [cx - 25, h * 0.68],
+      [cx - 24, h * 0.86],
+    ],
+    2.0,
+    0.45
+  );
+  drawCrevice(
+    [
+      [cx + 12, h * 0.54],
+      [cx + 15, h * 0.72],
+      [cx + 18, h * 0.88],
+    ],
+    2.0,
+    0.45
+  );
+
+  // 5. Signature Droopy, Half-Lidded Melancholic Eyes (厭世下垂半瞇眼)
+  const drawDroopyEye = (
+    ex: number,
+    ey: number,
+    rx: number,
+    ry: number,
+    lidTiltRad: number,
+    pupilOffsetX: number
+  ) => {
+    c.save();
+    c.translate(ex, ey);
+    c.rotate(lidTiltRad);
+
+    // Subtle dark olive under-eye bag / shadow strokes
+    c.fillStyle = 'rgba(34, 46, 20, 0.55)';
+    c.beginPath();
+    c.ellipse(0, ry * 0.35, rx * 1.12, ry * 0.82, 0, 0, Math.PI);
+    c.fill();
+
+    // Half-lidded eye shape: flat/gently arched top cut, full rounded bottom bowl
+    const traceEyeShape = () => {
+      c.beginPath();
+      c.moveTo(-rx, -ry * 0.22);
+      c.quadraticCurveTo(0, -ry * 0.36, rx, -ry * 0.20);
+      c.bezierCurveTo(rx * 1.04, ry * 0.68, rx * 0.48, ry * 0.96, 0, ry * 0.96);
+      c.bezierCurveTo(-rx * 0.48, ry * 0.96, -rx * 1.04, ry * 0.68, -rx, -ry * 0.22);
+      c.closePath();
+    };
+
+    traceEyeShape();
+    const scleraGrad = c.createRadialGradient(-2, 2, 2, 0, 2, rx * 1.1);
+    scleraGrad.addColorStop(0, '#f7f4e6');
+    scleraGrad.addColorStop(0.75, '#eae5d0');
+    scleraGrad.addColorStop(1, '#c7c1aa');
+    c.fillStyle = scleraGrad;
+    c.fill();
+
+    // Clip to eye interior for the dark round pupil tucked against the upper lid
+    c.save();
+    traceEyeShape();
+    c.clip();
+
+    const px = pupilOffsetX;
+    const py = -ry * 0.02;
+    const pr = 6.2;
+
+    c.fillStyle = '#261a14';
+    c.beginPath();
+    c.arc(px, py, pr, 0, Math.PI * 2);
+    c.fill();
+
+    // Tiny crisp white catchlight dot on upper-left of pupil
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.arc(px - 2.2, py - 1.8, 1.4, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    // Subtle lower rim outline
+    traceEyeShape();
+    c.strokeStyle = 'rgba(42, 33, 22, 0.55)';
+    c.lineWidth = 1.3;
+    c.stroke();
+
+    // Heavy droopy upper eyelid line
+    c.strokeStyle = '#281e14';
+    c.lineWidth = 2.6;
     c.lineCap = 'round';
     c.beginPath();
-    c.moveTo(bx, by);
-    c.lineTo(bx + Math.cos(ang) * tuftLen, by + Math.sin(ang) * tuftLen + 3);
+    c.moveTo(-rx * 1.05, -ry * 0.20);
+    c.quadraticCurveTo(0, -ry * 0.38, rx * 1.05, -ry * 0.18);
     c.stroke();
-  }
 
-  // Tiny botanical sprout on top of head
-  c.strokeStyle = '#4d6b2f';
-  c.lineWidth = 2.2;
+    c.restore();
+  };
+
+  // Left eye (viewer's left, tilted down-left) & Right eye (viewer's right, tilted slightly down-right)
+  drawDroopyEye(cx - 25, h * 0.305, 15.5, 12.5, -0.17, 2.2);
+  drawDroopyEye(cx + 18, h * 0.310, 15.0, 12.2, 0.08, 0.5);
+
+  // Horizontal dark under-eye crease lines under right eye (as seen in reference)
+  c.strokeStyle = 'rgba(38, 50, 22, 0.65)';
+  c.lineWidth = 1.5;
   c.beginPath();
-  c.moveTo(cx + 4, h * 0.11);
-  c.quadraticCurveTo(cx + 8, h * 0.04, cx + 16, h * 0.03);
+  c.moveTo(cx + 8, h * 0.362);
+  c.quadraticCurveTo(cx + 22, h * 0.370, cx + 34, h * 0.364);
   c.stroke();
-  // Two realistic little leaves on crown sprout
-  c.fillStyle = '#8ec255';
-  c.strokeStyle = '#2d4217';
-  c.lineWidth = 1;
-  c.beginPath();
-  c.ellipse(cx + 17, h * 0.03, 7, 3.5, -0.3, 0, Math.PI * 2);
+
+  // 6. Signature Small Maroon Open Mouth with 3 Tiny White Fangs (微張紅棕小嘴 + 3顆小尖牙)
+  const mx = cx - 4;
+  const my = h * 0.395;
+  const mw = 15.5;
+  const mh = 9.0;
+
+  c.save();
+  c.translate(mx, my);
+  c.rotate(-0.04);
+
+  const traceMouth = () => {
+    c.beginPath();
+    c.moveTo(-mw, 1);
+    c.bezierCurveTo(-mw, -mh * 1.05, mw, -mh * 1.05, mw, 1);
+    c.bezierCurveTo(mw * 1.05, mh * 0.78, mw * 0.45, mh * 0.85, 0, mh * 0.82);
+    c.bezierCurveTo(-mw * 0.45, mh * 0.85, -mw * 1.05, mh * 0.78, -mw, 1);
+    c.closePath();
+  };
+
+  traceMouth();
+  const mouthGrad = c.createLinearGradient(0, -mh, 0, mh);
+  mouthGrad.addColorStop(0, '#591512');
+  mouthGrad.addColorStop(0.45, '#801f1b');
+  mouthGrad.addColorStop(1, '#a62c26');
+  c.fillStyle = mouthGrad;
   c.fill();
-  c.stroke();
+
+  c.save();
+  traceMouth();
+  c.clip();
+
+  // Upper-left tiny white fang
+  c.fillStyle = '#ffffff';
   c.beginPath();
-  c.ellipse(cx + 6, h * 0.05, 5.5, 2.8, -2.4, 0, Math.PI * 2);
-  c.fill();
-  c.stroke();
-
-  // Small embedded river pebbles on shoulder & base
-  const pebbles = [
-    { x: cx - 52, y: h * 0.48, rx: 5.5, ry: 3.8, col: '#78716c' },
-    { x: cx + 56, y: h * 0.56, rx: 4.8, ry: 3.2, col: '#57534e' },
-    { x: cx - 38, y: h * 0.84, rx: 6.2, ry: 4.0, col: '#64748b' },
-  ];
-  for (const p of pebbles) {
-    c.fillStyle = p.col;
-    c.beginPath();
-    c.ellipse(p.x, p.y, p.rx, p.ry, 0.2, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.45)';
-    c.beginPath();
-    c.ellipse(p.x - 1.5, p.y - 1, p.rx * 0.4, p.ry * 0.35, 0.2, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  // 6. Realistic Sculpted Facial Features (Brow Ridge, Detailed Eyes with Irises, Mouth & Tongue)
-  const eyeY = h * 0.34;
-  const eyeOffsetX = 24;
-
-  // Deep eye socket shadow & overhanging mossy brow ridge
-  for (const side of [-1, 1]) {
-    const ex = cx + side * eyeOffsetX;
-
-    // Socket ambient occlusion
-    c.fillStyle = 'rgba(18, 26, 10, 0.78)';
-    c.beginPath();
-    c.ellipse(ex, eyeY + 1, 17, 13.5, 0, 0, Math.PI * 2);
-    c.fill();
-
-    // Realistic eyeball sclera with 3D spherical shading
-    const scleraGrad = c.createRadialGradient(ex - 3, eyeY - 3, 2, ex, eyeY, 14);
-    scleraGrad.addColorStop(0, '#fffef7');
-    scleraGrad.addColorStop(0.7, '#e7e2ce');
-    scleraGrad.addColorStop(1, '#9c947a');
-    c.fillStyle = scleraGrad;
-    c.beginPath();
-    c.ellipse(ex, eyeY, 14, 11, 0, 0, Math.PI * 2);
-    c.fill();
-
-    // Realistic Hazel-Amber Iris with radial fibers
-    const irisX = ex - side * 1.5;
-    const irisGrad = c.createRadialGradient(irisX, eyeY, 1.5, irisX, eyeY, 6.8);
-    irisGrad.addColorStop(0, '#d97706');
-    irisGrad.addColorStop(0.65, '#92400e');
-    irisGrad.addColorStop(1, '#291507');
-    c.fillStyle = irisGrad;
-    c.beginPath();
-    c.arc(irisX, eyeY, 6.5, 0, Math.PI * 2);
-    c.fill();
-
-    // Deep glossy pupil
-    c.fillStyle = '#0f0a06';
-    c.beginPath();
-    c.arc(irisX, eyeY, 3.4, 0, Math.PI * 2);
-    c.fill();
-
-    // Dual realistic corneal specular catchlights
-    c.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    c.beginPath();
-    c.arc(irisX - 2.2, eyeY - 2.4, 2.1, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    c.beginPath();
-    c.arc(irisX + 2.0, eyeY + 2.0, 1.0, 0, Math.PI * 2);
-    c.fill();
-
-    // Upper heavy mossy eyelid & brow fold
-    c.fillStyle = '#33471f';
-    c.beginPath();
-    c.ellipse(ex, eyeY - 6.5, 15.5, 5.5, side * -0.08, Math.PI, Math.PI * 2);
-    c.fill();
-    c.strokeStyle = '#1a2410';
-    c.lineWidth = 2.0;
-    c.beginPath();
-    c.arc(ex, eyeY + 2, 14.2, Math.PI * 1.08, Math.PI * 1.92);
-    c.stroke();
-  }
-
-  // Realistic Resting Mouth & Moist Pink Tongue Tip
-  const mouthY = h * 0.48;
-  // Mouth crease shadow
-  c.fillStyle = '#181f10';
-  c.beginPath();
-  c.moveTo(cx - 26, mouthY - 1);
-  c.quadraticCurveTo(cx, mouthY + 12, cx + 26, mouthY - 1);
-  c.quadraticCurveTo(cx, mouthY + 4, cx - 26, mouthY - 1);
+  c.moveTo(-mw * 0.56, -mh * 0.62);
+  c.lineTo(-mw * 0.42, -mh * 0.15);
+  c.lineTo(-mw * 0.28, -mh * 0.68);
   c.closePath();
   c.fill();
 
-  // Cute realistic glossed pink tongue peeking out
-  const tongueGrad = c.createLinearGradient(cx, mouthY, cx, mouthY + 15);
-  tongueGrad.addColorStop(0, '#9f1239');
-  tongueGrad.addColorStop(0.4, '#e11d48');
-  tongueGrad.addColorStop(1, '#fda4af');
-  c.fillStyle = tongueGrad;
+  // Upper-right tiny white fang
   c.beginPath();
-  c.arc(cx, mouthY + 3, 9.5, 0.05, Math.PI - 0.05);
-  c.fill();
-  c.strokeStyle = '#4c0519';
-  c.lineWidth = 1.4;
-  c.stroke();
-
-  // Tongue central sulcus & wet specular shine
-  c.strokeStyle = 'rgba(136, 19, 55, 0.6)';
-  c.lineWidth = 1.1;
-  c.beginPath();
-  c.moveTo(cx, mouthY + 3);
-  c.lineTo(cx, mouthY + 10);
-  c.stroke();
-  c.fillStyle = 'rgba(255, 255, 255, 0.65)';
-  c.beginPath();
-  c.ellipse(cx - 3, mouthY + 7, 2.2, 1.2, -0.2, 0, Math.PI * 2);
+  c.moveTo(mw * 0.28, -mh * 0.68);
+  c.lineTo(mw * 0.42, -mh * 0.15);
+  c.lineTo(mw * 0.56, -mh * 0.62);
+  c.closePath();
   c.fill();
 
-  // Two small ivory lower canine teeth tips
-  c.fillStyle = '#fefce8';
+  // Lower tiny white tooth speck
   c.beginPath();
-  c.moveTo(cx - 14, mouthY + 2);
-  c.lineTo(cx - 11, mouthY - 3);
-  c.lineTo(cx - 8, mouthY + 3);
-  c.fill();
-  c.beginPath();
-  c.moveTo(cx + 8, mouthY + 3);
-  c.lineTo(cx + 11, mouthY - 3);
-  c.lineTo(cx + 14, mouthY + 2);
+  c.moveTo(mw * 0.08, mh * 0.85);
+  c.lineTo(mw * 0.18, mh * 0.42);
+  c.lineTo(mw * 0.28, mh * 0.85);
+  c.closePath();
   c.fill();
 
   c.restore();
+
+  traceMouth();
+  c.strokeStyle = '#3d120e';
+  c.lineWidth = 1.4;
+  c.stroke();
+
+  c.restore();
+  c.restore(); // silhouette clip
+
+  // Soft outer fibrous moss edge strokes along the silhouette perimeter
+  c.save();
+  c.strokeStyle = '#4a612d';
+  c.lineWidth = 1.6;
+  c.globalAlpha = 0.65;
+  traceSilhouette();
+  c.stroke();
+  c.restore();
+
   mossMonsterCanvasCache = canvas;
   return canvas;
 }
 
 /**
- * Draw 醜泥怪 (Mud Monster - High-Detail Realistic Moss Creature)
+ * Draw 醜泥怪 (Mud Monster - Faithful to Official Illustration)
  */
 export function drawMudMonster(
   ctx: CanvasRenderingContext2D,
@@ -594,27 +724,28 @@ export function drawMudMonster(
   const squash = isMoving ? 1 + Math.sin(walkCycle * 8) * 0.045 : 1;
   const tilt = isMoving ? Math.cos(walkCycle * 8) * 0.04 : 0;
 
-  // Realistic Water Ripple & Ambient Occlusion Shadow under Monster
-  const shadowGrad = ctx.createRadialGradient(0, 0, baseWidth * 0.1, 0, 0, baseWidth * 0.52);
+  // Water Ripple & Ambient Occlusion Shadow under 醜泥怪
+  const shadowGrad = ctx.createRadialGradient(0, 0, baseWidth * 0.1, 0, 0, baseWidth * 0.54);
   shadowGrad.addColorStop(0, 'rgba(15, 25, 12, 0.58)');
   shadowGrad.addColorStop(0.65, 'rgba(20, 38, 18, 0.28)');
   shadowGrad.addColorStop(1, 'rgba(20, 38, 18, 0)');
   ctx.fillStyle = shadowGrad;
   ctx.beginPath();
-  ctx.ellipse(0, 1, baseWidth * 0.52, 7.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 1, baseWidth * 0.54, 7.5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Dynamic water ring around monster's submerged feet
+  // Dynamic water ring around submerged base
   ctx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.ellipse(0, 1, baseWidth * (0.46 + Math.sin(walkCycle * 5) * 0.03), 5.2, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 1, baseWidth * (0.48 + Math.sin(walkCycle * 5) * 0.03), 5.2, 0, 0, Math.PI * 2);
   ctx.stroke();
 
   const spriteCanvas = getMossMonsterCanvas();
   if (spriteCanvas) {
-    const drawW = baseWidth * 1.12 * squash;
-    const drawH = (baseHeight * 1.14) / squash;
+    // Preserve the tall mound aspect ratio of the official 醜泥怪 illustration
+    const drawW = baseWidth * 1.06 * squash;
+    const drawH = Math.max(baseHeight * 1.12, baseWidth * 1.15) / squash;
     const drawX = -drawW / 2;
     const drawY = -drawH + bob + 3;
 
@@ -624,101 +755,53 @@ export function drawMudMonster(
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-    // Exaggerated Realistic Giant Gaping Mouth Catching / Eating Animation (寫實化張大嘴吃垃圾動作)
+    // Wide-Open Maroon Mouth Catching Animation (張大紅棕嘴與小尖牙接垃圾動作)
     if (isCatching) {
-      // 1. Warm subsurface flush on cheeks
-      const blushL = ctx.createRadialGradient(-drawW * 0.28, drawY + drawH * 0.39, 1, -drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11);
-      blushL.addColorStop(0, 'rgba(244, 63, 94, 0.65)');
-      blushL.addColorStop(1, 'rgba(244, 63, 94, 0)');
-      ctx.fillStyle = blushL;
-      ctx.beginPath();
-      ctx.arc(-drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11, 0, Math.PI * 2);
-      ctx.fill();
-
-      const blushR = ctx.createRadialGradient(drawW * 0.28, drawY + drawH * 0.39, 1, drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11);
-      blushR.addColorStop(0, 'rgba(244, 63, 94, 0.65)');
-      blushR.addColorStop(1, 'rgba(244, 63, 94, 0)');
-      ctx.fillStyle = blushR;
-      ctx.beginPath();
-      ctx.arc(drawW * 0.28, drawY + drawH * 0.39, drawW * 0.11, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 2. Realistic Anatomically Shaded Giant Cavern Mouth
-      const mouthX = 0;
-      const mouthY = drawY + drawH * 0.54;
-      const mouthRx = drawW * 0.30;
-      const mouthRy = drawH * 0.22;
+      const mouthX = -drawW * 0.02;
+      const mouthY = drawY + drawH * 0.42;
+      const mouthRx = drawW * 0.19;
+      const mouthRy = drawH * 0.12;
 
       ctx.save();
-      // Outer mossy lip rim
-      ctx.fillStyle = '#263618';
-      ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY, mouthRx + 2.5, mouthRy + 2.5, 0, 0, Math.PI * 2);
-      ctx.fill();
+      const mGrad = ctx.createLinearGradient(mouthX, mouthY - mouthRy, mouthX, mouthY + mouthRy);
+      mGrad.addColorStop(0, '#4a100d');
+      mGrad.addColorStop(0.5, '#7f1d18');
+      mGrad.addColorStop(1, '#ad2e28');
+      ctx.fillStyle = mGrad;
+      ctx.strokeStyle = '#330c09';
+      ctx.lineWidth = 1.6;
 
-      // Deep oral cavity radial gradient
-      const throatGrad = ctx.createRadialGradient(mouthX, mouthY - 2, 2, mouthX, mouthY, mouthRx);
-      throatGrad.addColorStop(0, '#1f0306');
-      throatGrad.addColorStop(0.65, '#4c0519');
-      throatGrad.addColorStop(1, '#2e0812');
-      ctx.fillStyle = throatGrad;
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, -0.04, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
 
-      ctx.save();
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, -0.04, 0, Math.PI * 2);
       ctx.clip();
 
-      // Realistic Glossy Muscular Tongue
-      const tGrad = ctx.createLinearGradient(mouthX, mouthY, mouthX, mouthY + mouthRy);
-      tGrad.addColorStop(0, '#be123c');
-      tGrad.addColorStop(0.5, '#f43f5e');
-      tGrad.addColorStop(1, '#fda4af');
-      ctx.fillStyle = tGrad;
+      // Signature 2 upper white fangs & 1 lower white tooth scaled up for catching
+      ctx.fillStyle = '#ffffff';
+      // Upper left fang
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY + mouthRy * 0.46, mouthRx * 0.76, mouthRy * 0.68, 0, 0, Math.PI * 2);
+      ctx.moveTo(mouthX - mouthRx * 0.52, mouthY - mouthRy * 0.95);
+      ctx.lineTo(mouthX - mouthRx * 0.36, mouthY - mouthRy * 0.25);
+      ctx.lineTo(mouthX - mouthRx * 0.20, mouthY - mouthRy * 0.95);
+      ctx.fill();
+      // Upper right fang
+      ctx.beginPath();
+      ctx.moveTo(mouthX + mouthRx * 0.20, mouthY - mouthRy * 0.95);
+      ctx.lineTo(mouthX + mouthRx * 0.36, mouthY - mouthRy * 0.25);
+      ctx.lineTo(mouthX + mouthRx * 0.52, mouthY - mouthRy * 0.95);
+      ctx.fill();
+      // Lower tooth
+      ctx.beginPath();
+      ctx.moveTo(mouthX + mouthRx * 0.05, mouthY + mouthRy * 0.98);
+      ctx.lineTo(mouthX + mouthRx * 0.18, mouthY + mouthRy * 0.38);
+      ctx.lineTo(mouthX + mouthRx * 0.30, mouthY + mouthRy * 0.98);
       ctx.fill();
 
-      // Tongue highlight
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-      ctx.beginPath();
-      ctx.ellipse(mouthX - mouthRx * 0.18, mouthY + mouthRy * 0.32, mouthRx * 0.22, mouthRy * 0.15, -0.15, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Realistic Shaded Ivory Upper & Lower Fangs
-      const drawRealisticFang = (fx: number, fy: number, fw: number, fh: number, pointDown: boolean) => {
-        const fGrad = ctx.createLinearGradient(fx, fy, fx, fy + (pointDown ? fh : -fh));
-        fGrad.addColorStop(0, '#d6c7a9');
-        fGrad.addColorStop(0.4, '#fefce8');
-        fGrad.addColorStop(1, '#ffffff');
-        ctx.fillStyle = fGrad;
-        ctx.strokeStyle = '#3f2e1e';
-        ctx.lineWidth = 0.9;
-        ctx.beginPath();
-        ctx.moveTo(fx - fw / 2, fy);
-        ctx.quadraticCurveTo(fx - fw * 0.15, fy + (pointDown ? fh * 0.7 : -fh * 0.7), fx, fy + (pointDown ? fh : -fh));
-        ctx.quadraticCurveTo(fx + fw * 0.15, fy + (pointDown ? fh * 0.7 : -fh * 0.7), fx + fw / 2, fy);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      };
-
-      const topY = mouthY - mouthRy * 0.92;
-      const fW = mouthRx * 0.26;
-      const fH = mouthRy * 0.68;
-      drawRealisticFang(-mouthRx * 0.52, topY, fW, fH * 0.9, true);
-      drawRealisticFang(-mouthRx * 0.18, topY, fW, fH * 1.1, true);
-      drawRealisticFang(mouthRx * 0.18, topY, fW, fH * 1.1, true);
-      drawRealisticFang(mouthRx * 0.52, topY, fW, fH * 0.9, true);
-
-      const botY = mouthY + mouthRy * 0.94;
-      drawRealisticFang(-mouthRx * 0.34, botY, fW * 0.85, fH * 0.65, false);
-      drawRealisticFang(mouthRx * 0.34, botY, fW * 0.85, fH * 0.65, false);
-
-      ctx.restore(); // clip
-      ctx.restore(); // mouth
+      ctx.restore();
     }
 
     ctx.imageSmoothingEnabled = prevSmooth;
@@ -789,9 +872,13 @@ const WATER_SPIRIT_SPRITE_DATA = [
 ];
 
 /**
- * Pre-render High-Definition Realistic 米多力 (Midori - Divine River Spirit / Water Goddess)
- * Features cascading translucent water-silk hair strands, realistic sculpted facial anatomy,
- * sapphire-teal irises with eyelashes, draped kimono-style silk & gold robes, and celestial ribbons.
+ * Pre-render High-Definition 米多力 (Midori - Cute Aqua Water Spirit)
+ * Faithfully modeled after the official character illustration:
+ * - Soft pastel-shaded sky-blue / aqua water-spirit body with stubby raised arms & curved tail base
+ * - Signature sculpted pompadour water-wave hair crest curling up to a sharp peak on the upper-left
+ * - Big round white eyes with large inward-looking dark brown pupils & rosy pink cheek blushes
+ * - Cheerful coral-orange open smile with 2 upper tiny white teeth and 1 lower tiny tooth
+ * - Signature sandy-yellow square crossbody bag with a cyan water droplet & concentric ripple rings
  */
 let waterSpiritCanvasCache: HTMLCanvasElement | null = null;
 
@@ -807,341 +894,336 @@ function getWaterSpiritCanvas(): HTMLCanvasElement {
   const c = canvas.getContext('2d');
   if (!c) return canvas;
 
-  const cx = w / 2;
+  const rand = seededRandom(3088);
+  const cx = w * 0.50;
 
-  // 1. Back Flowing Cascading Water-Silk Hair (Deep Ocean Teal to Luminous Cyan-White)
+  // 1. Lower Body, Stubby Arms & Gently Curved Water-Spirit Tail Base
   c.save();
-  const backHairGrad = c.createLinearGradient(cx, h * 0.08, cx, h * 0.92);
-  backHairGrad.addColorStop(0, '#125869');
-  backHairGrad.addColorStop(0.35, '#278ea5');
-  backHairGrad.addColorStop(0.75, '#64c5da');
-  backHairGrad.addColorStop(1, '#bcebf5');
-  c.fillStyle = backHairGrad;
-  c.beginPath();
-  c.moveTo(cx, h * 0.10);
-  c.bezierCurveTo(cx - 56, h * 0.14, cx - 78, h * 0.48, cx - 68, h * 0.86);
-  c.quadraticCurveTo(cx - 32, h * 0.95, cx, h * 0.92);
-  c.quadraticCurveTo(cx + 32, h * 0.95, cx + 68, h * 0.86);
-  c.bezierCurveTo(cx + 78, h * 0.48, cx + 56, h * 0.14, cx, h * 0.10);
-  c.closePath();
+  const traceBodyAndArms = () => {
+    c.beginPath();
+    // Left neck join
+    c.moveTo(cx - 32, h * 0.50);
+    // Outward to left stubby arm (raised slightly in a cute greeting)
+    c.bezierCurveTo(cx - 46, h * 0.50, cx - 64, h * 0.45, cx - 68, h * 0.49);
+    c.bezierCurveTo(cx - 72, h * 0.54, cx - 58, h * 0.60, cx - 40, h * 0.60);
+    // Left torso down to tapered lower-left hip
+    c.bezierCurveTo(cx - 40, h * 0.72, cx - 34, h * 0.84, cx - 18, h * 0.91);
+    // Curved water-spirit tail base sweeping toward bottom-right
+    c.bezierCurveTo(cx + 4, h * 0.96, cx + 42, h * 0.96, cx + 52, h * 0.92);
+    c.bezierCurveTo(cx + 58, h * 0.89, cx + 40, h * 0.80, cx + 38, h * 0.64);
+    // Outward to right stubby arm
+    c.bezierCurveTo(cx + 54, h * 0.64, cx + 70, h * 0.59, cx + 68, h * 0.53);
+    c.bezierCurveTo(cx + 66, h * 0.49, cx + 48, h * 0.54, cx + 34, h * 0.53);
+    c.closePath();
+  };
+
+  traceBodyAndArms();
+  const bodyGrad = c.createRadialGradient(cx - 12, h * 0.62, 10, cx + 4, h * 0.70, 78);
+  bodyGrad.addColorStop(0, '#a8eefb');
+  bodyGrad.addColorStop(0.35, '#64d0e8');
+  bodyGrad.addColorStop(0.78, '#45b7d1');
+  bodyGrad.addColorStop(1, '#2694b0');
+  c.fillStyle = bodyGrad;
   c.fill();
 
-  // Individual flowing silk hair strand highlights in back hair
-  c.strokeStyle = 'rgba(224, 247, 250, 0.38)';
-  c.lineWidth = 1.5;
-  for (let i = -5; i <= 5; i++) {
-    c.beginPath();
-    c.moveTo(cx + i * 6, h * 0.16);
-    c.bezierCurveTo(
-      cx + i * 11,
-      h * 0.42,
-      cx + i * 13 + Math.sin(i) * 8,
-      h * 0.68,
-      cx + i * 10,
-      h * 0.88
-    );
-    c.stroke();
-  }
+  c.save();
+  traceBodyAndArms();
+  c.clip();
+
+  // Soft icy-white highlight on chest/belly (above the crossbody bag)
+  const bellyGlow = c.createRadialGradient(cx - 18, h * 0.60, 2, cx - 18, h * 0.60, 26);
+  bellyGlow.addColorStop(0, 'rgba(228, 251, 255, 0.85)');
+  bellyGlow.addColorStop(1, 'rgba(228, 251, 255, 0)');
+  c.fillStyle = bellyGlow;
+  c.beginPath();
+  c.arc(cx - 18, h * 0.60, 26, 0, Math.PI * 2);
+  c.fill();
+
+  // Deeper teal neck-under-chin shadow
+  const neckShade = c.createLinearGradient(0, h * 0.49, 0, h * 0.57);
+  neckShade.addColorStop(0, 'rgba(18, 126, 154, 0.55)');
+  neckShade.addColorStop(1, 'rgba(18, 126, 154, 0)');
+  c.fillStyle = neckShade;
+  c.fillRect(cx - 45, h * 0.49, 90, h * 0.08);
+
+  c.restore(); // body clip
   c.restore();
 
-  // 2. Celestial Floating Water-Silk Ribbon (羽衣) Arching Behind Shoulders
+  // 2. Plump, Wide, Adorable Rounded Head (Tilted slightly clockwise like reference photo)
   c.save();
-  const ribbonGrad = c.createLinearGradient(cx - 85, h * 0.3, cx + 85, h * 0.6);
-  ribbonGrad.addColorStop(0, 'rgba(188, 235, 245, 0.25)');
-  ribbonGrad.addColorStop(0.5, 'rgba(100, 197, 218, 0.78)');
-  ribbonGrad.addColorStop(1, 'rgba(188, 235, 245, 0.25)');
-  c.strokeStyle = ribbonGrad;
+  const traceHead = () => {
+    c.beginPath();
+    // Start top-left forehead
+    c.moveTo(cx - 46, h * 0.25);
+    // Left plump cheek
+    c.bezierCurveTo(cx - 64, h * 0.33, cx - 64, h * 0.48, cx - 36, h * 0.53);
+    // Soft rounded chin & jawline
+    c.bezierCurveTo(cx - 12, h * 0.56, cx + 16, h * 0.57, cx + 38, h * 0.54);
+    // Right plump cheek up to right temple
+    c.bezierCurveTo(cx + 64, h * 0.49, cx + 66, h * 0.31, cx + 48, h * 0.22);
+    c.closePath();
+  };
+
+  traceHead();
+  const headGrad = c.createRadialGradient(cx - 8, h * 0.36, 12, cx + 2, h * 0.39, 66);
+  headGrad.addColorStop(0, '#8ee5f7');
+  headGrad.addColorStop(0.45, '#5ecbe3');
+  headGrad.addColorStop(0.82, '#43b6d0');
+  headGrad.addColorStop(1, '#2493b0');
+  c.fillStyle = headGrad;
+  c.fill();
+
+  c.save();
+  traceHead();
+  c.clip();
+
+  // Deeper teal shadow directly under the overhanging wave hair crest
+  c.strokeStyle = '#1486a3';
+  c.lineWidth = 5.5;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(cx - 44, h * 0.27);
+  c.bezierCurveTo(cx - 18, h * 0.33, cx + 8, h * 0.26, cx + 38, h * 0.27);
+  c.stroke();
+
+  // Subtle curved teal eyebrow-crease on right forehead (visible in photo)
+  c.strokeStyle = '#1689a6';
+  c.lineWidth = 2.0;
+  c.beginPath();
+  c.moveTo(cx + 12, h * 0.255);
+  c.quadraticCurveTo(cx + 28, h * 0.252, cx + 40, h * 0.278);
+  c.stroke();
+
+  // 3. Soft Rosy-Pink Cheek Blushes (粉嫩圓形腮紅)
+  const drawCheekBlush = (bx: number, by: number, br: number) => {
+    const bGrad = c.createRadialGradient(bx, by, 1.5, bx, by, br);
+    bGrad.addColorStop(0, 'rgba(246, 136, 134, 0.85)');
+    bGrad.addColorStop(0.55, 'rgba(250, 172, 170, 0.48)');
+    bGrad.addColorStop(1, 'rgba(250, 172, 170, 0)');
+    c.fillStyle = bGrad;
+    c.beginPath();
+    c.arc(bx, by, br, 0, Math.PI * 2);
+    c.fill();
+  };
+  drawCheekBlush(cx - 38, h * 0.425, 13.5);
+  drawCheekBlush(cx + 22, h * 0.475, 13.5);
+
+  // 4. Big Round White Eyes with Inward-Looking Dark Brown Pupils (圓潤大眼)
+  const drawMidoriEye = (ex: number, ey: number, rx: number, ry: number, pupilDX: number, pupilDY: number) => {
+    c.save();
+    c.translate(ex, ey);
+
+    // Subtle teal eye-socket rim shading
+    c.fillStyle = 'rgba(20, 130, 158, 0.42)';
+    c.beginPath();
+    c.ellipse(-0.8, -0.8, rx + 1.5, ry + 1.5, 0.08, 0, Math.PI * 2);
+    c.fill();
+
+    // Crisp white eyeball
+    const eyeGrad = c.createRadialGradient(2, 2, 2, 0, 0, rx);
+    eyeGrad.addColorStop(0, '#ffffff');
+    eyeGrad.addColorStop(0.85, '#f8feff');
+    eyeGrad.addColorStop(1, '#cbeff7');
+    c.fillStyle = eyeGrad;
+    c.beginPath();
+    c.ellipse(0, 0, rx, ry, 0.08, 0, Math.PI * 2);
+    c.fill();
+
+    // Clip to eyeball for the large dark chocolate-brown pupil
+    c.beginPath();
+    c.ellipse(0, 0, rx, ry, 0.08, 0, Math.PI * 2);
+    c.clip();
+
+    c.fillStyle = '#362015';
+    c.beginPath();
+    c.ellipse(pupilDX, pupilDY, rx * 0.56, ry * 0.68, 0.06, 0, Math.PI * 2);
+    c.fill();
+
+    c.restore();
+  };
+
+  // Left eye (higher) & Right eye (slightly lower, matching head tilt)
+  drawMidoriEye(cx - 22, h * 0.355, 13.2, 14.2, 3.8, -0.8);
+  drawMidoriEye(cx + 21, h * 0.390, 13.2, 14.2, -3.4, -0.6);
+
+  // 5. Cheerful Coral-Orange Open Smile with 3 Tiny White Teeth (開朗橘紅笑口 + 3顆小白牙)
+  c.save();
+  c.translate(cx - 3, h * 0.448);
+  c.rotate(0.14);
+
+  const mw = 13.0;
+  const mh = 10.5;
+  const traceSmile = () => {
+    c.beginPath();
+    c.moveTo(-mw, -mh * 0.35);
+    c.quadraticCurveTo(0, -mh * 0.22, mw, -mh * 0.35);
+    c.bezierCurveTo(mw * 1.02, mh * 0.65, mw * 0.45, mh * 0.95, 0, mh * 0.95);
+    c.bezierCurveTo(-mw * 0.45, mh * 0.95, -mw * 1.02, mh * 0.65, -mw, -mh * 0.35);
+    c.closePath();
+  };
+
+  traceSmile();
+  const smileGrad = c.createLinearGradient(0, -mh * 0.3, 0, mh);
+  smileGrad.addColorStop(0, '#d94b22');
+  smileGrad.addColorStop(0.4, '#eb6034');
+  smileGrad.addColorStop(1, '#f07146');
+  c.fillStyle = smileGrad;
+  c.fill();
+
+  c.save();
+  traceSmile();
+  c.clip();
+
+  // 3 Tiny White Teeth (2 top corners, 1 bottom-right)
+  c.fillStyle = '#ffffff';
+  // Top-left tooth
+  c.beginPath();
+  c.ellipse(-mw * 0.52, -mh * 0.25, 2.2, 2.6, 0, 0, Math.PI * 2);
+  c.fill();
+  // Top-right tooth
+  c.beginPath();
+  c.ellipse(mw * 0.52, -mh * 0.25, 2.2, 2.6, 0, 0, Math.PI * 2);
+  c.fill();
+  // Bottom-right tooth
+  c.beginPath();
+  c.ellipse(mw * 0.14, mh * 0.86, 2.1, 2.3, 0, 0, Math.PI * 2);
+  c.fill();
+
+  c.restore();
+
+  // Subtle darker coral-brown upper lip outline
+  c.strokeStyle = '#9e3519';
+  c.lineWidth = 1.3;
+  traceSmile();
+  c.stroke();
+
+  c.restore(); // smile
+  c.restore(); // head clip
+  c.restore();
+
+  // 6. Signature Sculpted Pompadour Water-Wave Hair Crest (標誌性左上翹起水波浪花劉海)
+  c.save();
+  const traceWaveCrest = () => {
+    c.beginPath();
+    // Start at sharp upper-left wave tip!
+    c.moveTo(cx - 48, h * 0.025);
+    // Outer-left curve of the wave sweeping down and tucking into the forehead
+    c.bezierCurveTo(cx - 68, h * 0.12, cx - 64, h * 0.25, cx - 34, h * 0.285);
+    // Bottom overhang edge sweeping across forehead to the right temple
+    c.bezierCurveTo(cx - 10, h * 0.305, cx + 16, h * 0.24, cx + 44, h * 0.245);
+    // Rounded right cushion of the wave hair
+    c.bezierCurveTo(cx + 52, h * 0.19, cx + 38, h * 0.11, cx + 10, h * 0.11);
+    // Upper concave sweep curling up into the sharp upper-left wave peak
+    c.bezierCurveTo(cx - 18, h * 0.11, cx - 36, h * 0.08, cx - 48, h * 0.025);
+    c.closePath();
+  };
+
+  traceWaveCrest();
+  const waveGrad = c.createLinearGradient(cx - 50, h * 0.04, cx + 20, h * 0.29);
+  waveGrad.addColorStop(0, '#6ed6ec');
+  waveGrad.addColorStop(0.45, '#8ce5f7');
+  waveGrad.addColorStop(0.78, '#46bad4');
+  waveGrad.addColorStop(1, '#1d96b3');
+  c.fillStyle = waveGrad;
+  c.fill();
+
+  c.save();
+  traceWaveCrest();
+  c.clip();
+
+  // Luminous pale-aqua / icy-white highlight band curving along the wave ridge
+  c.strokeStyle = 'rgba(220, 250, 255, 0.78)';
   c.lineWidth = 11;
   c.lineCap = 'round';
   c.beginPath();
-  c.moveTo(cx - 82, h * 0.68);
-  c.bezierCurveTo(cx - 96, h * 0.24, cx - 42, h * 0.05, cx, h * 0.07);
-  c.bezierCurveTo(cx + 42, h * 0.05, cx + 96, h * 0.24, cx + 82, h * 0.68);
+  c.moveTo(cx - 40, h * 0.13);
+  c.bezierCurveTo(cx - 18, h * 0.19, cx + 12, h * 0.17, cx + 30, h * 0.18);
   c.stroke();
 
-  c.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-  c.lineWidth = 2;
-  c.stroke();
+  c.restore(); // wave clip
   c.restore();
 
-  // 3. Realistic Draped Silk & Gold Water-Deity Robes (Torso, Wide Sleeves & Skirt)
+  // 7. Signature Sandy-Yellow Crossbody Bag with Water-Drop & Concentric Ripples (斜背水滴波紋小方包)
   c.save();
-  // Wide flowing aqua outer sleeves
-  const sleeveGrad = c.createLinearGradient(cx, h * 0.46, cx, h * 0.84);
-  sleeveGrad.addColorStop(0, '#45b0c7');
-  sleeveGrad.addColorStop(0.6, '#278ea5');
-  sleeveGrad.addColorStop(1, '#16697a');
-  c.fillStyle = sleeveGrad;
+  // Crossbody Straps
+  c.strokeStyle = '#cbb068';
+  c.lineWidth = 2.6;
+  c.lineCap = 'round';
+  // Left vertical strap (up to left armpit)
   c.beginPath();
-  c.moveTo(cx - 24, h * 0.46);
-  c.bezierCurveTo(cx - 58, h * 0.50, cx - 76, h * 0.68, cx - 64, h * 0.82);
-  c.quadraticCurveTo(cx - 42, h * 0.84, cx - 28, h * 0.70);
-  c.lineTo(cx + 28, h * 0.70);
-  c.quadraticCurveTo(cx + 42, h * 0.84, cx + 64, h * 0.82);
-  c.bezierCurveTo(cx + 76, h * 0.68, cx + 58, h * 0.50, cx + 24, h * 0.46);
-  c.closePath();
-  c.fill();
-
-  // Main Golden-Silk & Deep Teal Tabard / Robe Skirt (y: 0.46 .. 0.95)
-  const robeGrad = c.createLinearGradient(cx - 38, h * 0.46, cx + 38, h * 0.95);
-  robeGrad.addColorStop(0, '#f3e3a8');
-  robeGrad.addColorStop(0.45, '#d6be78');
-  robeGrad.addColorStop(1, '#9e813c');
-  c.fillStyle = robeGrad;
+  c.moveTo(cx - 41, h * 0.585);
+  c.lineTo(cx - 41, h * 0.67);
+  c.stroke();
+  // Long diagonal strap across chest to right shoulder
   c.beginPath();
-  c.moveTo(cx - 24, h * 0.46);
-  c.lineTo(cx + 24, h * 0.46);
-  c.bezierCurveTo(cx + 36, h * 0.64, cx + 44, h * 0.82, cx + 38, h * 0.95);
-  c.quadraticCurveTo(cx, h * 0.98, cx - 38, h * 0.95);
-  c.bezierCurveTo(cx - 44, h * 0.82, cx - 36, h * 0.64, cx - 24, h * 0.46);
-  c.closePath();
-  c.fill();
-  c.strokeStyle = '#785f24';
-  c.lineWidth = 1.6;
+  c.moveTo(cx - 6, h * 0.675);
+  c.quadraticCurveTo(cx + 16, h * 0.59, cx + 41, h * 0.535);
   c.stroke();
 
-  // Central Deep-Teal Pleated Silk Front Panel & Drapery Folds
-  const centerPanelGrad = c.createLinearGradient(cx, h * 0.52, cx, h * 0.95);
-  centerPanelGrad.addColorStop(0, '#1b7a94');
-  centerPanelGrad.addColorStop(0.5, '#13576b');
-  centerPanelGrad.addColorStop(1, '#0c3b4a');
-  c.fillStyle = centerPanelGrad;
+  // 3D Bag Pouch rested on lower-left torso
+  const bagX = cx - 25;
+  const bagY = h * 0.745;
+  c.translate(bagX, bagY);
+  c.rotate(0.05);
+
+  // Shaded 3D bottom/right gusset of the bag
+  c.fillStyle = '#b5984e';
   c.beginPath();
-  c.moveTo(cx - 12, h * 0.52);
-  c.lineTo(cx + 12, h * 0.52);
-  c.lineTo(cx + 18, h * 0.95);
-  c.quadraticCurveTo(cx, h * 0.97, cx - 18, h * 0.95);
-  c.closePath();
+  c.roundRect(-19, -18, 41, 41, 6);
   c.fill();
 
-  // Golden Obi Waist Sash & Jewel Clasp
-  c.fillStyle = '#b39754';
-  c.strokeStyle = '#6b531b';
-  c.lineWidth = 1.4;
+  // Main sandy-yellow front face of the bag
+  const bagGrad = c.createLinearGradient(-20, -20, 18, 18);
+  bagGrad.addColorStop(0, '#e6cf86');
+  bagGrad.addColorStop(1, '#d4b96a');
+  c.fillStyle = bagGrad;
   c.beginPath();
-  c.roundRect(cx - 26, h * 0.55, 52, 12, 4);
-  c.fill();
-  c.stroke();
-
-  // Glowing Aqua Lotus Gem on Waist Sash
-  c.fillStyle = '#38bdf8';
-  c.beginPath();
-  c.arc(cx, h * 0.55 + 6, 4.5, 0, Math.PI * 2);
-  c.fill();
-  c.fillStyle = '#ffffff';
-  c.beginPath();
-  c.arc(cx - 1.5, h * 0.55 + 4.5, 1.5, 0, Math.PI * 2);
+  c.roundRect(-21, -20, 39, 38, 5);
   c.fill();
 
-  // Realistic Hands Gently Clasped or Poised at Sleeves
-  c.fillStyle = '#e0f7fa';
-  c.strokeStyle = '#278ea5';
-  c.lineWidth = 1.2;
-  c.beginPath();
-  c.ellipse(cx - 34, h * 0.67, 6.5, 4.5, 0.3, 0, Math.PI * 2);
-  c.fill();
-  c.stroke();
-  c.beginPath();
-  c.ellipse(cx + 34, h * 0.67, 6.5, 4.5, -0.3, 0, Math.PI * 2);
-  c.fill();
-  c.stroke();
-  c.restore();
-
-  // 4. Realistic Neck & Sculpted Face (Porcelain-Aqua Skin with Warm Subsurface Blush)
+  // Clip to front face of bag for the Water-Drop & 4 Concentric Ripple Rings Emblem
   c.save();
-  // Neck with collar shadow
-  c.fillStyle = '#a5e6f2';
   c.beginPath();
-  c.roundRect(cx - 9, h * 0.39, 18, 22, 4);
-  c.fill();
+  c.roundRect(-21, -20, 39, 38, 5);
+  c.clip();
 
-  // Crossed Kimono Collar (Eri) in crisp white & gold
-  c.fillStyle = '#ffffff';
-  c.strokeStyle = '#d6be78';
-  c.lineWidth = 2;
-  c.beginPath();
-  c.moveTo(cx - 18, h * 0.45);
-  c.lineTo(cx, h * 0.53);
-  c.lineTo(cx + 18, h * 0.45);
-  c.stroke();
-
-  // Sculpted Face Contour (Oval upper head tapering to delicate chin)
-  const faceY = h * 0.29;
-  const faceGrad = c.createRadialGradient(cx - 6, faceY - 8, 4, cx, faceY, 38);
-  faceGrad.addColorStop(0, '#f0fdff');
-  faceGrad.addColorStop(0.55, '#c6f1f9');
-  faceGrad.addColorStop(1, '#82d6e8');
-  c.fillStyle = faceGrad;
-  c.beginPath();
-  c.moveTo(cx - 32, faceY - 8);
-  c.bezierCurveTo(cx - 33, faceY + 14, cx - 18, faceY + 32, cx, faceY + 35);
-  c.bezierCurveTo(cx + 18, faceY + 32, cx + 33, faceY + 14, cx + 32, faceY - 8);
-  c.bezierCurveTo(cx + 32, faceY - 32, cx - 32, faceY - 32, cx - 32, faceY - 8);
-  c.closePath();
-  c.fill();
-  c.strokeStyle = '#278ea5';
-  c.lineWidth = 1.4;
-  c.stroke();
-
-  // Soft Peach-Rose Cheek Blush
-  for (const side of [-1, 1]) {
-    const bGrad = c.createRadialGradient(cx + side * 19, faceY + 12, 1, cx + side * 19, faceY + 12, 11);
-    bGrad.addColorStop(0, 'rgba(244, 114, 182, 0.55)');
-    bGrad.addColorStop(1, 'rgba(244, 114, 182, 0)');
-    c.fillStyle = bGrad;
+  // 4 Concentric circular cyan-blue ripple rings
+  c.strokeStyle = '#259bb8';
+  c.lineWidth = 1.15;
+  for (const r of [4.8, 8.2, 11.6, 15.0]) {
     c.beginPath();
-    c.arc(cx + side * 19, faceY + 12, 11, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  // 5. Realistic Expressive Sapphire-Teal Eyes with Eyelashes & Starry Catchlights
-  const eyeY = faceY + 2;
-  for (const side of [-1, 1]) {
-    const ex = cx + side * 14.5;
-
-    // Crisp white sclera
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.ellipse(ex, eyeY, 8.2, 6.8, side * 0.05, 0, Math.PI * 2);
-    c.fill();
-
-    // Multi-layered Sapphire-Brown-Teal Iris
-    const irisGrad = c.createLinearGradient(ex, eyeY - 6, ex, eyeY + 6);
-    irisGrad.addColorStop(0, '#1e293b');
-    irisGrad.addColorStop(0.45, '#0e7490');
-    irisGrad.addColorStop(1, '#38bdf8');
-    c.fillStyle = irisGrad;
-    c.beginPath();
-    c.arc(ex - side * 0.6, eyeY + 0.5, 5.4, 0, Math.PI * 2);
-    c.fill();
-
-    // Deep Pupil
-    c.fillStyle = '#090d16';
-    c.beginPath();
-    c.arc(ex - side * 0.6, eyeY + 0.5, 2.6, 0, Math.PI * 2);
-    c.fill();
-
-    // Dual Corneal Catchlights
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    c.arc(ex - 2.2, eyeY - 2.0, 2.0, 0, Math.PI * 2);
-    c.fill();
-    c.beginPath();
-    c.arc(ex + 1.8, eyeY + 2.2, 1.0, 0, Math.PI * 2);
-    c.fill();
-
-    // Realistic Curved Upper Eyelash Line & Wing
-    c.strokeStyle = '#1e1b18';
-    c.lineWidth = 2.2;
-    c.lineCap = 'round';
-    c.beginPath();
-    c.arc(ex, eyeY + 1.2, 8.4, Math.PI * 1.12, Math.PI * 1.88);
-    c.stroke();
-
-    // Delicate Eyebrow
-    c.strokeStyle = '#16697a';
-    c.lineWidth = 1.5;
-    c.beginPath();
-    c.arc(ex, eyeY - 3.5, 9.5, Math.PI * 1.2, Math.PI * 1.8);
+    c.arc(-1, 1, r, 0, Math.PI * 2);
     c.stroke();
   }
 
-  // Delicate Nose Bridge & Nostril Hint
-  c.strokeStyle = '#3898ad';
-  c.lineWidth = 1.2;
+  // Bold cyan-blue Water Droplet icon in the center-top of the ripples
+  c.fillStyle = '#0e8fb0';
   c.beginPath();
-  c.moveTo(cx - 0.5, faceY + 5);
-  c.lineTo(cx - 1.5, faceY + 12);
-  c.lineTo(cx + 1.2, faceY + 13);
-  c.stroke();
-
-  // Serene Coral-Rose Lips
-  const lipY = faceY + 21;
-  c.fillStyle = '#e15b64';
-  c.beginPath();
-  c.moveTo(cx - 7, lipY);
-  c.quadraticCurveTo(cx - 3, lipY - 2.5, cx, lipY - 1);
-  c.quadraticCurveTo(cx + 3, lipY - 2.5, cx + 7, lipY);
-  c.quadraticCurveTo(cx, lipY + 4.5, cx - 7, lipY);
+  c.moveTo(-1, -15);
+  c.bezierCurveTo(-5.5, -7, -6.2, -1, -1, 2.5);
+  c.bezierCurveTo(4.2, -1, 3.5, -7, -1, -15);
   c.closePath();
   c.fill();
-  // Lower lip gloss
-  c.fillStyle = 'rgba(255, 255, 255, 0.65)';
-  c.beginPath();
-  c.ellipse(cx, lipY + 1.2, 2.8, 0.9, 0, 0, Math.PI * 2);
-  c.fill();
 
-  // 6. Front Sculpted Bangs, Side Hair Locks & Golden Water-Crest Crown
-  const bangGrad = c.createLinearGradient(cx, h * 0.08, cx, h * 0.34);
-  bangGrad.addColorStop(0, '#bcebf5');
-  bangGrad.addColorStop(0.45, '#64c5da');
-  bangGrad.addColorStop(1, '#278ea5');
-  c.fillStyle = bangGrad;
-  c.strokeStyle = '#16697a';
-  c.lineWidth = 1.3;
+  c.restore(); // bag face clip
+  c.restore(); // bag transform
 
-  // Sweeping side locks framing the face
-  for (const side of [-1, 1]) {
-    c.beginPath();
-    c.moveTo(cx + side * 6, h * 0.13);
-    c.bezierCurveTo(
-      cx + side * 32,
-      h * 0.14,
-      cx + side * 42,
-      h * 0.32,
-      cx + side * 30,
-      h * 0.54
-    );
-    c.quadraticCurveTo(cx + side * 22, h * 0.38, cx + side * 26, h * 0.24);
-    c.closePath();
-    c.fill();
-    c.stroke();
+  // 8. Subtle Soft Chalk / Pastel Grain along Edges (Authentic Picture-Book Texture)
+  c.save();
+  for (let i = 0; i < 220; i++) {
+    const gx = cx - 65 + rand() * 130;
+    const gy = h * 0.06 + rand() * (h * 0.86);
+    c.fillStyle = rand() > 0.5 ? 'rgba(255, 255, 255, 0.18)' : 'rgba(18, 128, 156, 0.12)';
+    c.fillRect(gx, gy, 1.3, 1.3);
   }
-
-  // Layered feathered front bangs
-  c.beginPath();
-  c.moveTo(cx - 28, h * 0.22);
-  c.quadraticCurveTo(cx - 18, h * 0.11, cx, h * 0.11);
-  c.quadraticCurveTo(cx + 18, h * 0.11, cx + 28, h * 0.22);
-  c.quadraticCurveTo(cx + 16, h * 0.18, cx + 10, h * 0.24);
-  c.quadraticCurveTo(cx + 3, h * 0.17, cx, h * 0.23);
-  c.quadraticCurveTo(cx - 5, h * 0.17, cx - 12, h * 0.24);
-  c.quadraticCurveTo(cx - 20, h * 0.18, cx - 28, h * 0.22);
-  c.closePath();
-  c.fill();
-  c.stroke();
-
-  // Ornate Golden Water-Drop Hairpin / Tiara Crest on Top of Head
-  c.fillStyle = '#f3e3a8';
-  c.strokeStyle = '#856823';
-  c.lineWidth = 1.4;
-  c.beginPath();
-  c.moveTo(cx - 16, h * 0.12);
-  c.quadraticCurveTo(cx, h * 0.06, cx + 16, h * 0.12);
-  c.quadraticCurveTo(cx, h * 0.10, cx - 16, h * 0.12);
-  c.fill();
-  c.stroke();
-
-  // Flowing water-crest plume on crown
-  const crestGrad = c.createLinearGradient(cx, h * 0.01, cx, h * 0.11);
-  crestGrad.addColorStop(0, '#ffffff');
-  crestGrad.addColorStop(0.5, '#8adaea');
-  crestGrad.addColorStop(1, '#278ea5');
-  c.fillStyle = crestGrad;
-  c.beginPath();
-  c.moveTo(cx, h * 0.11);
-  c.bezierCurveTo(cx - 14, h * 0.06, cx - 10, h * 0.01, cx - 2, h * 0.02);
-  c.bezierCurveTo(cx + 8, h * 0.03, cx + 10, h * 0.08, cx, h * 0.11);
-  c.fill();
-  c.stroke();
-
   c.restore();
+
   waterSpiritCanvasCache = canvas;
   return canvas;
 }
 
 /**
- * Draw 米多力 (Midori - High-Detail Realistic Divine River Spirit)
+ * Draw 米多力 (Midori - Faithful to Official Illustration)
  */
 export function drawMidori(
   ctx: CanvasRenderingContext2D,
@@ -1164,7 +1246,7 @@ export function drawMidori(
   const bob = isMoving ? Math.sin(walkCycle * 10) * 4 : Math.sin(walkCycle * 4) * 2.2;
   const squash = isMoving ? 1 + Math.sin(walkCycle * 10) * 0.035 : 1;
 
-  // 1. Luminous Multi-Ring Divine Aqua Halo & Water Lotus Aura
+  // 1. Soft Luminous Aqua Halo & Ripple Aura
   const auraGrad = ctx.createRadialGradient(
     0,
     -baseHeight * 0.54 + bob,
@@ -1173,26 +1255,13 @@ export function drawMidori(
     -baseHeight * 0.54 + bob,
     baseWidth * 0.82
   );
-  auraGrad.addColorStop(0, 'rgba(186, 230, 253, 0.55)');
-  auraGrad.addColorStop(0.55, 'rgba(56, 189, 248, 0.24)');
+  auraGrad.addColorStop(0, 'rgba(186, 230, 253, 0.52)');
+  auraGrad.addColorStop(0.55, 'rgba(56, 189, 248, 0.22)');
   auraGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
   ctx.fillStyle = auraGrad;
   ctx.beginPath();
   ctx.arc(0, -baseHeight * 0.54 + bob, baseWidth * 0.82, 0, Math.PI * 2);
   ctx.fill();
-
-  // Rotating golden-aqua celestial halo ring
-  ctx.save();
-  ctx.translate(0, -baseHeight * 0.56 + bob);
-  ctx.rotate(walkCycle * 0.8);
-  ctx.strokeStyle = 'rgba(125, 211, 252, 0.58)';
-  ctx.lineWidth = 1.6;
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.arc(0, 0, baseWidth * 0.62, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.restore();
 
   // Water surface reflection & concentric ripple rings under Midori
   ctx.strokeStyle = 'rgba(186, 230, 253, 0.72)';
@@ -1203,8 +1272,9 @@ export function drawMidori(
 
   const spriteCanvas = getWaterSpiritCanvas();
   if (spriteCanvas) {
-    const drawW = baseWidth * 1.15 * squash;
-    const drawH = (baseHeight * 1.22) / squash;
+    // Preserve the tall water-spirit aspect ratio of the official 米多力 illustration
+    const drawW = baseWidth * 1.08 * squash;
+    const drawH = Math.max(baseHeight * 1.16, baseWidth * 1.20) / squash;
     const drawX = -drawW / 2;
     const drawY = -drawH + bob + 2;
 
@@ -1212,70 +1282,73 @@ export function drawMidori(
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(spriteCanvas, drawX, drawY, drawW, drawH);
 
-    // Exaggerated Realistic Divine Water Purification Expression (米多力寫實淨化吸入動作)
+    // Wide Joyful Coral-Orange Smile & Water Ripple Catching Animation (米多力開朗張嘴淨化動作)
     if (isCatching) {
-      const mouthX = 0;
-      const mouthY = drawY + drawH * 0.39;
-      const mouthRx = drawW * 0.16;
-      const mouthRy = drawH * 0.10;
+      const mouthX = -drawW * 0.015;
+      const mouthY = drawY + drawH * 0.45;
+      const mouthRx = drawW * 0.13;
+      const mouthRy = drawH * 0.085;
 
       ctx.save();
-      // Shaded joyful open mouth
-      const mGrad = ctx.createRadialGradient(mouthX, mouthY, 1, mouthX, mouthY, mouthRx);
-      mGrad.addColorStop(0, '#881337');
-      mGrad.addColorStop(1, '#be123c');
+      ctx.translate(mouthX, mouthY);
+      ctx.rotate(0.12);
+
+      const mGrad = ctx.createLinearGradient(0, -mouthRy, 0, mouthRy);
+      mGrad.addColorStop(0, '#d9481e');
+      mGrad.addColorStop(1, '#f26a3d');
       ctx.fillStyle = mGrad;
-      ctx.strokeStyle = '#9f1239';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#9e3519';
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, mouthRx, mouthRy, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.save();
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, mouthRx, mouthRy, 0, 0, Math.PI * 2);
       ctx.clip();
 
-      // Pearly upper teeth row
+      // 3 Cute White Teeth inside wide-open joyful mouth
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(mouthX - mouthRx * 0.65, mouthY - mouthRy, mouthRx * 1.3, mouthRy * 0.42);
-
-      // Glossy rose tongue
-      ctx.fillStyle = '#fb7185';
       ctx.beginPath();
-      ctx.ellipse(mouthX, mouthY + mouthRy * 0.45, mouthRx * 0.72, mouthRy * 0.6, 0, 0, Math.PI * 2);
+      ctx.arc(-mouthRx * 0.48, -mouthRy * 0.78, mouthRx * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(mouthRx * 0.48, -mouthRy * 0.78, mouthRx * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(mouthRx * 0.15, mouthRy * 0.82, mouthRx * 0.20, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Swirling 3D Refractive Water Vortex Rings
-      ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)';
-      ctx.lineWidth = 1.8;
-      ctx.setLineDash([4, 3]);
+      // Concentric water-droplet ripple rings pulsing out when Midori catches trash
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.arc(mouthX, mouthY, mouthRx * 1.6, 0, Math.PI * 2);
+      ctx.arc(0, 0, mouthRx * 1.65, 0, Math.PI * 2);
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(mouthX, mouthY, mouthRx * 2.3, 0, Math.PI * 2);
+      ctx.arc(0, 0, mouthRx * 2.35, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.setLineDash([]);
+
       ctx.restore();
     }
     ctx.imageSmoothingEnabled = prevSmooth;
   }
 
-  // Orbiting 3D Refractive Water Orbs around Midori
+  // Orbiting Pure Water Droplet Orbs around Midori
   for (let i = 0; i < 3; i++) {
     const ang = walkCycle * 4 + (i * Math.PI * 2) / 3;
     const ox = Math.cos(ang) * (baseWidth * 0.52);
     const oy = -baseHeight * 0.52 + Math.sin(ang * 1.5) * (baseHeight * 0.24) + bob;
     ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
     ctx.beginPath();
-    ctx.arc(ox, oy, 3.6, 0, Math.PI * 2);
+    ctx.arc(ox, oy, 3.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(ox - 1.2, oy - 1.2, 1.3, 0, Math.PI * 2);
+    ctx.arc(ox - 1.1, oy - 1.1, 1.2, 0, Math.PI * 2);
     ctx.fill();
   }
 
