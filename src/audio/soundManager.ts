@@ -187,6 +187,12 @@ class SoundManager {
     this.playTone(440, 'triangle', 0.04, 0.3);
   }
 
+  // Theatrical Stage Curtain Open / Close Chime (舞台開幕/閉幕音效)
+  public playCurtain() {
+    this.playNoise(0.28, 0.15, true);
+    this.playTone(523.25, 'sine', 0.28, 0.22, this.sfxGain, 659.25);
+  }
+
   // Game over defeat sound (AC-35)
   public playGameOver() {
     const notes = [392.0, 369.99, 349.23, 329.63, 293.66, 246.94, 220.0];

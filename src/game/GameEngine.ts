@@ -38,7 +38,7 @@ export class GameEngine {
   public readonly V_HEIGHT = 540;
   public readonly PLAY_MIN_X = 90;
   public readonly PLAY_MAX_X = 870;
-  public readonly BRIDGE_DROP_Y = 115;
+  public readonly BRIDGE_DROP_Y = 135; // Exactly 1/4 of 540 vertical resolution
   public readonly RIVER_Y = 430;
 
   // Player State
@@ -148,11 +148,11 @@ export class GameEngine {
 
   private initPedestrians() {
     this.pedestrians = [
-      { id: 'p1', type: 'child', x: 200, y: 72, direction: 1, speed: 45, walkFrame: 0, color: '#0284c7', balloonColor: '#ef4444' },
-      { id: 'p2', type: 'adult', x: 450, y: 72, direction: -1, speed: 50, walkFrame: 2, color: '#475569' },
-      { id: 'p3', type: 'dog', x: 170, y: 75, direction: 1, speed: 65, walkFrame: 1, color: '#b45309' },
-      { id: 'p4', type: 'elder', x: 720, y: 72, direction: -1, speed: 30, walkFrame: 0, color: '#57534e' },
-      { id: 'p5', type: 'teen', x: 600, y: 72, direction: 1, speed: 55, walkFrame: 3, color: '#9333ea' },
+      { id: 'p1', type: 'child', x: 200, y: 88, direction: 1, speed: 45, walkFrame: 0, color: '#0284c7', balloonColor: '#ef4444' },
+      { id: 'p2', type: 'adult', x: 450, y: 88, direction: -1, speed: 50, walkFrame: 2, color: '#475569' },
+      { id: 'p3', type: 'dog', x: 170, y: 91, direction: 1, speed: 65, walkFrame: 1, color: '#b45309' },
+      { id: 'p4', type: 'elder', x: 720, y: 88, direction: -1, speed: 30, walkFrame: 0, color: '#57534e' },
+      { id: 'p5', type: 'teen', x: 600, y: 88, direction: 1, speed: 55, walkFrame: 3, color: '#9333ea' },
     ];
   }
 

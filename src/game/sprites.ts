@@ -1102,11 +1102,11 @@ function getColoredPencilSceneBackdrop(
   if (!ctx) return canvas;
 
   const rand = seededRandom(waterQuality === 'BLUE' ? 777 : waterQuality === 'GREY' ? 888 : 999);
-  const bridgeTop = 75;
-  const bridgeHeight = 40;
-  const wallTop = bridgeTop + bridgeHeight; // 115
+  const bridgeTop = 90;
+  const bridgeHeight = 45;
+  const wallTop = bridgeTop + bridgeHeight; // 135 (Exactly 540 / 4 = 1/4 of total screen height!)
   const riverTop = 430;
-  const wallHeight = riverTop - wallTop; // 315
+  const wallHeight = riverTop - wallTop; // 295
 
   // 1. Hand-Drawn Colored Pencil Sky (y: 0..75)
   const skyColors =
@@ -1199,7 +1199,7 @@ function getColoredPencilSceneBackdrop(
   const wallRight = width - 75; // 885
   const wallW = wallRight - wallLeft; // 810
   const cols = 15; // 810 / 15 = 54px per tile
-  const rows = 6; // 315 / 6 = 52.5px per tile
+  const rows = 5; // 295 / 5 = 59px per tile
   const tileW = wallW / cols;
   const tileH = wallHeight / rows;
 

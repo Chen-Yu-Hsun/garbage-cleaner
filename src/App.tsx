@@ -13,6 +13,7 @@ import { GameOverModal } from './components/GameOverModal';
 import { LeaderboardModal } from './components/LeaderboardModal';
 import { PlayerStats, WaterQuality, CharacterMode, GrowthStage } from './types/game';
 import { sound } from './audio/soundManager';
+import { StageCurtain } from './components/StageCurtain';
 
 type GameFlowState = 'INTRO_VIDEO' | 'INSTRUCTIONS' | 'START_SCREEN' | 'PLAYING' | 'GAME_OVER';
 
@@ -49,6 +50,28 @@ export default function App() {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
+
+  // Stage Curtain Transition State (舞台開閉幕過場)
+  const [isCurtainClosed, setIsCurtainClosed] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  const executeWithCurtain = useCallback((action: () => void) => {
+    sound.playCurtain();
+    setIsCurtainClosed(true);
+    pendingActionRef.current = action;
+  }, []);
+
+  const handleCurtainClosed = useCallback(() => {
+    if (pendingActionRef.current) {
+      pendingActionRef.current();
+      pendingActionRef.current = null;
+    }
+    // Brief pause at closed curtain before opening stage
+    setTimeout(() => {
+      sound.playCurtain();
+      setIsCurtainClosed(false);
+    }, 140);
+  }, []);
 
   // Save nickname when changed
   const handleNicknameChange = (name: string) => {
@@ -117,7 +140,11 @@ export default function App() {
 
           engineRef.current.onGameOver = (stats) => {
             setFinalStats(stats);
-            setFlowState('GAME_OVER');
+            setTimeout(() => {
+              executeWithCurtain(() => {
+                setFlowState('GAME_OVER');
+              });
+            }, 450);
           };
         }
         engineRef.current.start();
@@ -187,12 +214,12 @@ export default function App() {
       >
         {/* Intro Cutscene State */}
         {flowState === 'INTRO_VIDEO' && (
-          <IntroCutscene onComplete={() => setFlowState('INSTRUCTIONS')} />
+          <IntroCutscene onComplete={() => executeWithCurtain(() => setFlowState('INSTRUCTIONS'))} />
         )}
 
         {/* Step-by-step Instructions State */}
         {flowState === 'INSTRUCTIONS' && (
-          <InstructionModal onComplete={() => setFlowState('START_SCREEN')} />
+          <InstructionModal onComplete={() => executeWithCurtain(() => setFlowState('START_SCREEN'))} />
         )}
 
         {/* Start Screen State */}
@@ -200,10 +227,10 @@ export default function App() {
           <StartScreen
             nickname={nickname}
             onNicknameChange={handleNicknameChange}
-            onStartGame={handleStartGame}
+            onStartGame={() => executeWithCurtain(handleStartGame)}
             onOpenLeaderboard={() => setShowLeaderboard(true)}
             onOpenInstructions={() => setShowInstructions(true)}
-            onReplayIntro={() => setFlowState('INTRO_VIDEO')}
+            onReplayIntro={() => executeWithCurtain(() => setFlowState('INTRO_VIDEO'))}
           />
         )}
 
@@ -254,7 +281,7 @@ export default function App() {
               onMoveRightEnd={() => {
                 if (engineRef.current) engineRef.current.moveRight = false;
               }}
-              onReturnHome={handleReturnHome}
+              onReturnHome={() => executeWithCurtain(handleReturnHome)}
             />
           )}
 
@@ -264,9 +291,9 @@ export default function App() {
               stats={finalStats}
               nickname={nickname}
               playerId={playerId}
-              onPlayAgain={handlePlayAgain}
+              onPlayAgain={() => executeWithCurtain(handlePlayAgain)}
               onOpenLeaderboard={() => setShowLeaderboard(true)}
-              onReturnHome={handleReturnHome}
+              onReturnHome={() => executeWithCurtain(handleReturnHome)}
             />
           )}
         </div>
@@ -285,6 +312,12 @@ export default function App() {
             <InstructionModal onComplete={() => setShowInstructions(false)} />
           </div>
         )}
+
+        {/* Theatrical Stage Curtain Transition Overlay (舞台開閉幕過場) */}
+        <StageCurtain
+          isClosed={isCurtainClosed}
+          onClosedTransitionEnd={handleCurtainClosed}
+        />
       </div>
     </main>
   );
