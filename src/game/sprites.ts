@@ -1160,6 +1160,418 @@ export function drawPedestrian(ctx: CanvasRenderingContext2D, p: Pedestrian) {
 }
 
 /**
+ * 3. Monumental Vertical 3D Arch Supports (直立3D拱形支撐)
+ * Replaces the square retaining wall with 4 massive vertical 3D stone piers
+ * and 3 monumental semicircular arches with cavernous 3D tunnel alcoves,
+ * radiating voussoirs, protruding keystones, impost moldings, cutwaters, and spandrels.
+ */
+function drawVertical3DArchSupports(
+  ctx: CanvasRenderingContext2D,
+  wallLeft: number,
+  wallTop: number,
+  wallW: number,
+  wallHeight: number,
+  riverTop: number,
+  waterQuality: WaterQuality
+) {
+  // Architectural Dimensions:
+  // Piers: P0 (75..125), P1 (328..378), P2 (582..632), P3 (835..885)
+  // Arches:
+  // Arch 0 (left): x: 125..328, span 203, cx: 226.5, r: 101.5
+  // Arch 1 (center): x: 378..582, span 204, cx: 480.0, r: 102.0 (framing player at 480!)
+  // Arch 2 (right): x: 632..835, span 203, cx: 733.5, r: 101.5
+  // Spring line: ySpring = 248. Arch Apex = 248 - 102 = 146.
+  // Bridge Soffit = 135.
+  const ySpring = 248;
+  const piers = [
+    { x: 75, w: 50 },
+    { x: 328, w: 50 },
+    { x: 582, w: 50 },
+    { x: 835, w: 50 },
+  ];
+  const arches = [
+    { x1: 125, x2: 328, cx: 226.5, r: 101.5, viewAngle: -1 }, // viewed looking slightly right
+    { x1: 378, x2: 582, cx: 480.0, r: 102.0, viewAngle: 0 },  // centered
+    { x1: 632, x2: 835, cx: 733.5, r: 101.5, viewAngle: 1 },  // viewed looking slightly left
+  ];
+
+  // Palette definitions based on water quality
+  const isBlack = waterQuality === 'BLACK';
+  const isGrey = waterQuality === 'GREY';
+
+  const tunnelDeep = isBlack ? '#0a0807' : isGrey ? '#1c1a18' : '#140d07';
+  const tunnelOuter = isBlack ? '#161311' : isGrey ? '#2c2926' : '#281a10';
+  const tunnelRib = isBlack ? 'rgba(0, 0, 0, 0.65)' : isGrey ? 'rgba(30, 26, 22, 0.55)' : 'rgba(25, 12, 5, 0.6)';
+
+  const stoneTints = isBlack
+    ? ['#362f28', '#2b2520', '#3e362e', '#241e1a', '#332b24']
+    : isGrey
+    ? ['#e8e6e3', '#dedbd6', '#f3f1ed', '#cfcac4', '#e2dfda']
+    : ['#fbf2e3', '#f5e5cf', '#eed8bc', '#fef8ee', '#e8cfb0'];
+
+  const stoneOutline = isBlack ? '#14110e' : '#331c0a';
+  const pierPaper = isBlack ? '#29231d' : isGrey ? '#e8e5e0' : '#faeedd';
+  const pierPencils = isBlack
+    ? ['#302a24', '#241f1a', '#3b332b', '#1c1713']
+    : isGrey
+    ? ['#cfcbca', '#beb8b4', '#dedad7', '#a8a29d']
+    : ['#dfc5a4', '#d2b48e', '#eedbc3', '#c49f75', '#e9d0b3'];
+
+  // --- 1. SPANDRELS & BASE MASONRY WALL (y: 135..248) ---
+  // Fill upper area between bridge deck and arch curve
+  fillColoredPencilRect(ctx, wallLeft, wallTop, wallW, ySpring - wallTop + 10, pierPaper, pierPencils, -34, 2.6, 0.72, 310);
+
+  // Horizontal Ashlar Stone courses in spandrels
+  ctx.save();
+  ctx.strokeStyle = stoneOutline;
+  ctx.lineWidth = 1.3;
+  ctx.globalAlpha = 0.55;
+  for (let sy = wallTop + 18; sy < ySpring; sy += 22) {
+    ctx.beginPath();
+    ctx.moveTo(wallLeft, sy);
+    ctx.lineTo(wallLeft + wallW, sy);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // --- 2. DEEP CAVERNOUS ARCH TUNNELS (Alcove Depth) ---
+  for (const arch of arches) {
+    ctx.save();
+    // Tunnel opening path
+    ctx.beginPath();
+    ctx.moveTo(arch.x1, riverTop);
+    ctx.lineTo(arch.x1, ySpring);
+    ctx.arc(arch.cx, ySpring, arch.r, Math.PI, 0, false);
+    ctx.lineTo(arch.x2, riverTop);
+    ctx.closePath();
+
+    // Radial shadow gradient receding deep into cavern
+    const grad = ctx.createRadialGradient(arch.cx, ySpring + 30, 15, arch.cx, ySpring + 30, arch.r + 30);
+    grad.addColorStop(0, tunnelDeep);
+    grad.addColorStop(0.7, tunnelOuter);
+    grad.addColorStop(1, tunnelDeep);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Perspective Barrel Vault Ceiling Ribs
+    ctx.strokeStyle = tunnelRib;
+    ctx.lineWidth = 2.0;
+    for (let rib = 1; rib <= 4; rib++) {
+      const ribR = arch.r * (1 - rib * 0.17);
+      const ribY = ySpring - rib * 8;
+      ctx.beginPath();
+      ctx.arc(arch.cx, ribY, ribR, Math.PI, 0, false);
+      ctx.stroke();
+    }
+
+    // Tunnel canal waterline shadow
+    const tunnelWaterGrad = ctx.createLinearGradient(0, riverTop - 25, 0, riverTop);
+    tunnelWaterGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    tunnelWaterGrad.addColorStop(1, isBlack ? 'rgba(0,0,0,0.95)' : 'rgba(10,5,2,0.75)');
+    ctx.fillStyle = tunnelWaterGrad;
+    ctx.fillRect(arch.x1, riverTop - 25, arch.x2 - arch.x1, 25);
+
+    // 3D Perspective Intrados Jamb Shadow / Highlight based on viewing angle
+    const jambW = 14;
+    if (arch.viewAngle < 0) {
+      // Left arch: Right jamb is viewed in profile (catches deep shadow)
+      ctx.fillStyle = 'rgba(10, 5, 2, 0.58)';
+      ctx.fillRect(arch.x2 - jambW, ySpring, jambW, riverTop - ySpring);
+      // Left jamb catches subtle bounce light
+      ctx.fillStyle = 'rgba(255, 250, 230, 0.15)';
+      ctx.fillRect(arch.x1, ySpring, jambW * 0.7, riverTop - ySpring);
+    } else if (arch.viewAngle > 0) {
+      // Right arch: Left jamb is viewed in profile (catches shadow from center view)
+      ctx.fillStyle = 'rgba(10, 5, 2, 0.58)';
+      ctx.fillRect(arch.x1, ySpring, jambW, riverTop - ySpring);
+      // Right jamb catches subtle light
+      ctx.fillStyle = 'rgba(255, 250, 230, 0.15)';
+      ctx.fillRect(arch.x2 - jambW * 0.7, ySpring, jambW * 0.7, riverTop - ySpring);
+    } else {
+      // Center arch: symmetrical depth jamb shadows
+      ctx.fillStyle = 'rgba(10, 5, 2, 0.35)';
+      ctx.fillRect(arch.x1, ySpring, jambW * 0.6, riverTop - ySpring);
+      ctx.fillRect(arch.x2 - jambW * 0.6, ySpring, jambW * 0.6, riverTop - ySpring);
+    }
+
+    ctx.restore();
+  }
+
+  // --- 3. ARCH VOUSSOIRS & PROTRUDING KEYSTONES (拱形放射石塊與拱心石) ---
+  for (const arch of arches) {
+    const rIn = arch.r;
+    const rOut = arch.r + 17;
+    const numVoussoirs = 15;
+
+    for (let v = 0; v < numVoussoirs; v++) {
+      // Skip the center voussoir (index 7), which will be the grand 3D Keystone
+      if (v === 7) continue;
+
+      const th1 = Math.PI * (1 - v / numVoussoirs);
+      const th2 = Math.PI * (1 - (v + 1) / numVoussoirs);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(arch.cx, ySpring, rOut, th1, th2, false);
+      ctx.arc(arch.cx, ySpring, rIn, th2, th1, true);
+      ctx.closePath();
+
+      // Stone block fill
+      const tint = stoneTints[(v * 3 + Math.round(arch.cx)) % stoneTints.length];
+      ctx.fillStyle = tint;
+      ctx.fill();
+
+      // Mortar outline
+      ctx.strokeStyle = stoneOutline;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      // 3D Sun highlight along outer curved edge
+      ctx.strokeStyle = isBlack ? 'rgba(255,255,255,0.18)' : 'rgba(255, 255, 245, 0.85)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(arch.cx, ySpring, rOut - 1.2, th1, th2, false);
+      ctx.stroke();
+
+      // 3D Cast shadow along inner curved rim
+      ctx.strokeStyle = isBlack ? 'rgba(0,0,0,0.7)' : 'rgba(25, 12, 5, 0.55)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(arch.cx, ySpring, rIn + 1.2, th1, th2, false);
+      ctx.stroke();
+
+      // Fine colored-pencil radial shading
+      ctx.clip();
+      ctx.strokeStyle = isBlack ? 'rgba(255,255,255,0.04)' : 'rgba(150, 105, 60, 0.16)';
+      ctx.lineWidth = 1.0;
+      const midTh = (th1 + th2) / 2;
+      const dirX = Math.cos(midTh);
+      const dirY = Math.sin(midTh);
+      ctx.beginPath();
+      ctx.moveTo(arch.cx + dirX * (rIn + 2), ySpring - dirY * (rIn + 2));
+      ctx.lineTo(arch.cx + dirX * (rOut - 2), ySpring - dirY * (rOut - 2));
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // 3D Monumental Keystone (拱心石) at Apex
+    ctx.save();
+    const kwTop = 28;
+    const kwBot = 20;
+    const kh = (rOut - rIn) + 14; // Extends 8px above extrados and 6px below intrados
+    const kxCenter = arch.cx;
+    const kyApex = ySpring - rOut - 8;
+
+    ctx.beginPath();
+    ctx.moveTo(kxCenter - kwTop / 2, kyApex);
+    ctx.lineTo(kxCenter + kwTop / 2, kyApex);
+    ctx.lineTo(kxCenter + kwBot / 2, kyApex + kh);
+    ctx.lineTo(kxCenter - kwBot / 2, kyApex + kh);
+    ctx.closePath();
+
+    // Keystone face
+    ctx.fillStyle = isBlack ? '#423930' : isGrey ? '#f3f1ec' : '#fff8ed';
+    ctx.fill();
+
+    // 3D Keystone Drop Shadow on Right and Bottom
+    ctx.fillStyle = isBlack ? 'rgba(0,0,0,0.75)' : 'rgba(25, 12, 5, 0.65)';
+    ctx.beginPath();
+    ctx.moveTo(kxCenter + kwTop / 2, kyApex);
+    ctx.lineTo(kxCenter + kwTop / 2 + 3.5, kyApex + 2);
+    ctx.lineTo(kxCenter + kwBot / 2 + 3.5, kyApex + kh + 2);
+    ctx.lineTo(kxCenter - kwBot / 2, kyApex + kh);
+    ctx.lineTo(kxCenter + kwBot / 2, kyApex + kh);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3D Keystone Sun Highlight on Top and Left
+    ctx.strokeStyle = isBlack ? 'rgba(255,255,255,0.25)' : 'rgba(255, 255, 245, 0.95)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(kxCenter - kwBot / 2, kyApex + kh);
+    ctx.lineTo(kxCenter - kwTop / 2, kyApex);
+    ctx.lineTo(kxCenter + kwTop / 2, kyApex);
+    ctx.stroke();
+
+    // Keystone Outline
+    ctx.strokeStyle = stoneOutline;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(kxCenter - kwTop / 2, kyApex);
+    ctx.lineTo(kxCenter + kwTop / 2, kyApex);
+    ctx.lineTo(kxCenter + kwBot / 2, kyApex + kh);
+    ctx.lineTo(kxCenter - kwBot / 2, kyApex + kh);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Decorative carved central vertical line on keystone
+    ctx.strokeStyle = stoneOutline;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(kxCenter, kyApex + 3);
+    ctx.lineTo(kxCenter, kyApex + kh - 3);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // --- 4. 4 MONUMENTAL VERTICAL 3D PIERS (直立3D石柱) ---
+  for (let pIdx = 0; pIdx < piers.length; pIdx++) {
+    const pier = piers[pIdx];
+    const px = pier.x;
+    const pw = pier.w;
+
+    // A. Pier Impost Capital Molding (柱頭線腳 / 拱角裝飾線) at y: 242..252
+    const capX = px - 4;
+    const capW = pw + 8;
+    const capY = ySpring - 6;
+    const capH = 10;
+
+    // Capital shadow underneath
+    ctx.fillStyle = isBlack ? 'rgba(0,0,0,0.7)' : 'rgba(25, 12, 5, 0.58)';
+    ctx.fillRect(capX, capY + capH, capW, 4);
+
+    // Capital body
+    ctx.fillStyle = isBlack ? '#382f27' : isGrey ? '#dedad5' : '#eedec8';
+    ctx.fillRect(capX, capY, capW, capH);
+    ctx.strokeStyle = stoneOutline;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(capX, capY, capW, capH);
+
+    // Capital top ledge highlight
+    ctx.fillStyle = isBlack ? 'rgba(255,255,255,0.2)' : 'rgba(255, 255, 245, 0.9)';
+    ctx.fillRect(capX, capY, capW, 2.5);
+
+    // B. Vertical Pier Column Shaft (柱身石塊堆疊) from y: 252 down to 416
+    const shaftTop = capY + capH;
+    const shaftBot = riverTop - 14; // 416
+    const shaftH = shaftBot - shaftTop; // ~164px
+    const courseH = shaftH / 8; // 8 courses of ~20.5px each
+
+    for (let c = 0; c < 8; c++) {
+      const cy = shaftTop + c * courseH;
+
+      // Pier block fill with running bond alternation
+      const isTwoBlocks = c % 2 === 1;
+      const numB = isTwoBlocks ? 2 : 1;
+      const bw = pw / numB;
+
+      for (let b = 0; b < numB; b++) {
+        const bx = px + b * bw;
+        const tint = stoneTints[(c * 7 + b * 13 + pIdx * 5) % stoneTints.length];
+
+        ctx.fillStyle = tint;
+        ctx.fillRect(bx, cy, bw, courseH);
+
+        // Mortar lines
+        ctx.strokeStyle = stoneOutline;
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(bx, cy, bw, courseH);
+
+        // Course top highlight
+        ctx.fillStyle = isBlack ? 'rgba(255,255,255,0.1)' : 'rgba(255, 255, 245, 0.65)';
+        ctx.fillRect(bx, cy, bw, 2);
+
+        // Course bottom shadow
+        ctx.fillStyle = isBlack ? 'rgba(0,0,0,0.6)' : 'rgba(30, 15, 6, 0.45)';
+        ctx.fillRect(bx, cy + courseH - 2.5, bw, 2.5);
+
+        // Delicate vertical colored-pencil shading
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(bx + 1, cy + 1, bw - 2, courseH - 2);
+        ctx.clip();
+        ctx.strokeStyle = isBlack ? 'rgba(255,255,255,0.03)' : 'rgba(150, 110, 70, 0.12)';
+        ctx.lineWidth = 1.0;
+        for (let s = -bw; s < bw + courseH; s += 7) {
+          ctx.beginPath();
+          ctx.moveTo(bx + s, cy);
+          ctx.lineTo(bx + s + courseH, cy + courseH);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    // C. Pier Vertical 3D Edge Lighting (Full Pier Height Highlight & Shadow)
+    // Left edge sunlight highlight
+    ctx.fillStyle = isBlack ? 'rgba(255,255,255,0.18)' : 'rgba(255, 250, 230, 0.85)';
+    ctx.fillRect(px, shaftTop, 2.8, shaftH);
+
+    // Right edge cast shadow
+    ctx.fillStyle = isBlack ? 'rgba(0,0,0,0.72)' : 'rgba(25, 12, 5, 0.62)';
+    ctx.fillRect(px + pw - 3.2, shaftTop, 3.2, shaftH);
+
+    // D. 3D Cutwater Footing (分水墩 / 分水角) at y: 416..432 dipping into water
+    const cutTop = shaftBot;
+    const cutBot = riverTop + 2;
+    const cutMidX = px + pw / 2;
+
+    // Left face of cutwater (sunlit)
+    ctx.beginPath();
+    ctx.moveTo(px, cutTop);
+    ctx.lineTo(cutMidX, cutBot);
+    ctx.lineTo(cutMidX, cutTop);
+    ctx.closePath();
+    ctx.fillStyle = isBlack ? '#383028' : isGrey ? '#dedad5' : '#f7ebd8';
+    ctx.fill();
+    ctx.strokeStyle = stoneOutline;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Right face of cutwater (shaded)
+    ctx.beginPath();
+    ctx.moveTo(cutMidX, cutTop);
+    ctx.lineTo(cutMidX, cutBot);
+    ctx.lineTo(px + pw, cutTop);
+    ctx.closePath();
+    ctx.fillStyle = isBlack ? '#221b16' : isGrey ? '#aba49d' : '#ab7e4c';
+    ctx.fill();
+    ctx.strokeStyle = stoneOutline;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Center prow ridge highlight
+    ctx.strokeStyle = isBlack ? 'rgba(255,255,255,0.25)' : 'rgba(255, 255, 245, 0.9)';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(cutMidX, cutTop);
+    ctx.lineTo(cutMidX, cutBot);
+    ctx.stroke();
+  }
+
+  // --- 5. HANGING SPANDREL MOSS & IVY TENDRILS ---
+  const mossColors = isBlack
+    ? ['#27272a', '#3f3f46']
+    : isGrey
+    ? ['#64748b', '#94a3b8']
+    : ['#5b7d34', '#799c47', '#425f23'];
+
+  const mossSpots = [
+    { x: 125, y: wallTop + 6, w: 22, h: 32 },
+    { x: 328, y: wallTop + 6, w: 26, h: 42 },
+    { x: 378, y: wallTop + 6, w: 24, h: 38 },
+    { x: 582, y: wallTop + 6, w: 26, h: 42 },
+    { x: 632, y: wallTop + 6, w: 24, h: 38 },
+    { x: 835, y: wallTop + 6, w: 22, h: 32 },
+  ];
+
+  for (const m of mossSpots) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x + m.w, m.y);
+    ctx.quadraticCurveTo(m.x + m.w * 0.8, m.y + m.h * 0.6, m.x + m.w * 0.5, m.y + m.h);
+    ctx.quadraticCurveTo(m.x + m.w * 0.2, m.y + m.h * 0.6, m.x, m.y);
+    ctx.closePath();
+    ctx.clip();
+    fillColoredPencilRect(ctx, m.x - 2, m.y, m.w + 4, m.h, isBlack ? '#27272a' : '#d9f99d', mossColors, -38, 2.0, 0.8, 412);
+    ctx.restore();
+  }
+}
+
+/**
  * Cache offscreen static 3D stereoscopic colored-pencil background per WaterQuality
  * Pre-renders 3D extruded masonry blocks, perspective side slopes, and structural bridge corbels.
  */
@@ -1247,81 +1659,11 @@ function getColoredPencilSceneBackdrop(
   }
   ctx.restore();
 
-  // 3. 3D Under-Bridge Embankment Wall & 3D Stone Block Relief (x: 75..885, y: 135..430)
+  // 3. Monumental Vertical 3D Arch Supports (直立3D拱形支撐: 4 Vertical Piers & 3 Grand Arches)
   const wallLeft = 75;
   const wallRight = width - 75; // 885
   const wallW = wallRight - wallLeft; // 810
-  const cols = 15; // 810 / 15 = 54px per tile
-  const rows = 5; // 295 / 5 = 59px per tile
-  const tileW = wallW / cols;
-  const tileH = wallHeight / rows;
-
-  const wallPaper =
-    waterQuality === 'BLUE' ? '#fcf7ee' : waterQuality === 'GREY' ? '#f1ede6' : '#38322c';
-  const wallPencilColors =
-    waterQuality === 'BLUE'
-      ? ['#ead7bc', '#dfc7a7', '#f3e5d0', '#d4b894', '#e8d2b5']
-      : waterQuality === 'GREY'
-      ? ['#d6d3d1', '#a8a29e', '#e7e5e4']
-      : ['#292524', '#44403c', '#1c1917'];
-
-  // Base colored pencil wall wash
-  fillColoredPencilRect(ctx, wallLeft, wallTop, wallW, wallHeight, wallPaper, wallPencilColors, -33, 3.0, 0.58, 303);
-
-  // 3D Extruded Stone Tile Blocks (Beveled 3D Relief)
-  const blockGap = 2.5;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const bx = wallLeft + c * tileW + blockGap;
-      const by = wallTop + r * tileH + blockGap;
-      const bw = tileW - blockGap * 2;
-      const bh = tileH - blockGap * 2;
-
-      // 1. Recessed dark mortar groove
-      ctx.fillStyle = waterQuality === 'BLACK' ? '#14110e' : '#3a2718';
-      ctx.fillRect(bx - 1.5, by - 1.5, bw + 3, bh + 3);
-
-      // 2. Block face with masonry tone variation
-      const blockSeed = (r * 17 + c * 31) % 5;
-      const blockTint =
-        waterQuality === 'BLUE'
-          ? ['#fbf2e3', '#f4e6d2', '#fcf4e8', '#efe0ca', '#f8eee0'][blockSeed]
-          : waterQuality === 'GREY'
-          ? ['#e6e4df', '#ddd9d4', '#f1eee9', '#d5d0ca', '#ebe8e2'][blockSeed]
-          : ['#352e27', '#2e2722', '#3a322b', '#26201b', '#3e362e'][blockSeed];
-      ctx.fillStyle = blockTint;
-      ctx.fillRect(bx, by, bw, bh);
-
-      // 3. 3D Highlights on Top and Left edges
-      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 245, 0.88)';
-      ctx.fillRect(bx, by, bw, 2.5); // Top highlight ledge
-
-      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 250, 220, 0.55)';
-      ctx.fillRect(bx, by, 2.2, bh); // Left highlight edge
-
-      // 4. 3D Cast Shadows on Bottom and Right edges (creates physical block thickness)
-      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(0, 0, 0, 0.75)' : 'rgba(45, 28, 14, 0.68)';
-      ctx.fillRect(bx, by + bh - 3.5, bw, 3.5); // Bottom shadow
-
-      ctx.fillStyle = waterQuality === 'BLACK' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(45, 28, 14, 0.52)';
-      ctx.fillRect(bx + bw - 2.8, by, 2.8, bh); // Right shadow
-
-      // 5. Delicate hand-drawn colored-pencil shading hatching on each block
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(bx + 2, by + 2, bw - 4, bh - 4);
-      ctx.clip();
-      ctx.strokeStyle = waterQuality === 'BLACK' ? 'rgba(255,255,255,0.03)' : 'rgba(150, 110, 70, 0.14)';
-      ctx.lineWidth = 1.0;
-      for (let s = -bw; s < bw + bh; s += 8) {
-        ctx.beginPath();
-        ctx.moveTo(bx + s, by);
-        ctx.lineTo(bx + s + bh, by + bh);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  }
+  drawVertical3DArchSupports(ctx, wallLeft, wallTop, wallW, wallHeight, riverTop, waterQuality);
 
   // 4. 3D Bridge Structure, Overhead Fascia, Recessed Soffit & 3D Corbels
   const bridgePaper = waterQuality === 'BLACK' ? '#3b322b' : '#f2dfc8';
@@ -1592,7 +1934,8 @@ export function drawBridgeScene(
   height: number,
   waterQuality: WaterQuality,
   timeSec: number,
-  playerX: number = 480
+  playerX: number = 480,
+  skip2DWater: boolean = false
 ) {
   const riverTop = 430;
 
@@ -1670,6 +2013,28 @@ export function drawBridgeScene(
       }
     }
     ctx.restore();
+  }
+
+  // If Three.js is rendering 3D river water, skip procedural 2D sine waves
+  if (skip2DWater) {
+    // Subtle waterline foam along the 3D pier bases (y = 428..431)
+    ctx.save();
+    ctx.strokeStyle =
+      waterQuality === 'BLUE'
+        ? 'rgba(255, 255, 245, 0.75)'
+        : waterQuality === 'GREY'
+        ? 'rgba(230, 228, 225, 0.5)'
+        : 'rgba(100, 95, 90, 0.35)';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    for (let x = 0; x <= width; x += 16) {
+      const wy = riverTop + Math.sin(x * 0.08 + timeSec * 3) * 1.5;
+      if (x === 0) ctx.moveTo(x, wy);
+      else ctx.lineTo(x, wy);
+    }
+    ctx.stroke();
+    ctx.restore();
+    return;
   }
 
   // 4. 3D Wall Reflection into Water Plane

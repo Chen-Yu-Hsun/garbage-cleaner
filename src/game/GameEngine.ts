@@ -18,6 +18,7 @@ import {
   TRASH_TYPES,
 } from '../types/game';
 import { sound } from '../audio/soundManager';
+import { ThreeRiverWater } from './ThreeRiverWater';
 import {
   drawMudMonster,
   drawMidori,
@@ -32,6 +33,7 @@ export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   private animFrameId: number | null = null;
   private lastTimestamp: number = 0;
+  private threeWater: ThreeRiverWater;
 
   // Virtual resolution (16:9 standard retro aspect)
   public readonly V_WIDTH = 960;
@@ -105,6 +107,10 @@ export class GameEngine {
     this.ctx = context;
     this.ctx.imageSmoothingEnabled = false;
 
+    // Initialize Three.js 3D dynamic river water surface (height: 115px covering y: 425..540)
+    const riverHeight = this.V_HEIGHT - (this.RIVER_Y - 5);
+    this.threeWater = new ThreeRiverWater(this.V_WIDTH, riverHeight);
+
     this.initPedestrians();
     this.scheduleNextRaindrop();
   }
@@ -171,6 +177,13 @@ export class GameEngine {
     }
     sound.stopMusic();
     sound.stopMidoriLayer();
+  }
+
+  public destroy() {
+    this.stop();
+    if (this.threeWater) {
+      this.threeWater.dispose();
+    }
   }
 
   public pause() {
@@ -722,10 +735,25 @@ export class GameEngine {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.V_WIDTH, this.V_HEIGHT);
 
-    // 1. Draw 3D Stereoscopic Bridge, Clouds, River Water with Parallax
-    drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime, this.playerX);
+    // 1. Draw 3D Stereoscopic Bridge, Monumental Arch Supports, Clouds, Volumetric Light
+    const hasThreeWater = Boolean(this.threeWater && this.threeWater.isAvailable);
+    drawBridgeScene(ctx, this.V_WIDTH, this.V_HEIGHT, this.waterQuality, this.effectiveGameTime, this.playerX, hasThreeWater);
 
-    // 2. Draw Pedestrians on bridge
+    // 2. Render & Composite Three.js 3D Dynamic River Water Surface (y: 425..540)
+    if (hasThreeWater) {
+      this.threeWater.update(this.effectiveGameTime, this.waterQuality, this.playerX);
+      this.threeWater.render();
+      const riverStartY = this.RIVER_Y - 5;
+      ctx.drawImage(
+        this.threeWater.getCanvas(),
+        0,
+        riverStartY,
+        this.V_WIDTH,
+        this.V_HEIGHT - riverStartY
+      );
+    }
+
+    // 3. Draw Pedestrians on bridge
     for (const p of this.pedestrians) {
       drawPedestrian(ctx, p);
     }
